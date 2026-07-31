@@ -1,0 +1,53 @@
+## Student Requests
+
+### Create a student
+POST http://localhost:8080/api/students
+Content-Type: application/json
+
+{
+  "id": 12345678,
+  "firstName": "Juan",
+  "lastName": "Perez",
+  "dob": "2005-03-10T00:00:00",
+  "email": "juan@example.com",
+  "ownPhone": "1122334455",
+  "otherPhone": null,
+  "address": {
+    "street": "Av. Corrientes",
+    "number": 1234,
+    "city": "Buenos Aires",
+    "zip": 1414,
+    "country": "Argentina"
+  }
+}
+
+### Get a student by ID
+GET http://localhost:8080/api/students/12345678
+
+### Get all students
+GET http://localhost:8080/api/students
+
+### Update Student
+PUT http://localhost:8080/api/students/12345678
+Content-Type: application/json
+
+{
+  "id": 12345678,
+  "firstName": "Juan",
+  "middleName": "Manuel",
+  "lastName": "Perez",
+  "dob": "2005-03-10T00:00:00",
+  "email": "juan@example.com",
+  "ownPhone": "1122334455",
+  "otherPhone": "1122335566",
+  "address": {
+    "street": "Av. Corrientes",
+    "number": 1234,
+    "city": "Buenos Aires",
+    "zip": 1414,
+    "country": "Argentina"
+  }
+}
+
+### Delete Student (hard delete)
+DELETE http://localhost:8080/api/students/12345678
