@@ -1,4 +1,4 @@
-package com.ecocenter.institute_api.config;
+package com.institute.institute_api.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

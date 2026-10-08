@@ -1,8 +1,8 @@
-package com.ecocenter.institute_api.controller;
+package com.institute.institute_api.controller;
 
-import com.ecocenter.institute_api.dto.student.StudentRequestDTO;
-import com.ecocenter.institute_api.dto.student.StudentResponseDTO;
-import com.ecocenter.institute_api.service.StudentService;
+import com.institute.institute_api.dto.student.StudentRequestDTO;
+import com.institute.institute_api.dto.student.StudentResponseDTO;
+import com.institute.institute_api.service.StudentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;

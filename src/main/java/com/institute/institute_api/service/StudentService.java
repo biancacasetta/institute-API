@@ -1,11 +1,11 @@
-package com.ecocenter.institute_api.service;
+package com.institute.institute_api.service;
 
-import com.ecocenter.institute_api.dto.student.StudentRequestDTO;
-import com.ecocenter.institute_api.dto.student.StudentResponseDTO;
-import com.ecocenter.institute_api.entity.Course;
-import com.ecocenter.institute_api.entity.Student;
-import com.ecocenter.institute_api.repository.CourseRepository;
-import com.ecocenter.institute_api.repository.StudentRepository;
+import com.institute.institute_api.dto.student.StudentRequestDTO;
+import com.institute.institute_api.dto.student.StudentResponseDTO;
+import com.institute.institute_api.entity.Course;
+import com.institute.institute_api.entity.Student;
+import com.institute.institute_api.repository.CourseRepository;
+import com.institute.institute_api.repository.StudentRepository;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;

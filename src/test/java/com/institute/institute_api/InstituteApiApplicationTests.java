@@ -1,4 +1,4 @@
-package com.ecocenter.institute_api;
+package com.institute.institute_api;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

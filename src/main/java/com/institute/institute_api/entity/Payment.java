@@ -1,4 +1,4 @@
-package com.ecocenter.institute_api.entity;
+package com.institute.institute_api.entity;
 
 import jakarta.persistence.*;
 import lombok.*;

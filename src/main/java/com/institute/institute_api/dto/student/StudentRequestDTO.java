@@ -1,6 +1,6 @@
-package com.ecocenter.institute_api.dto.student;
+package com.institute.institute_api.dto.student;
 
-import com.ecocenter.institute_api.embeddable.Address;
+import com.institute.institute_api.embeddable.Address;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.*;
 import lombok.Getter;

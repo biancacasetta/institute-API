@@ -1,6 +1,6 @@
-package com.ecocenter.institute_api.dto.student;
+package com.institute.institute_api.dto.student;
 
-import com.ecocenter.institute_api.entity.Student;
+import com.institute.institute_api.entity.Student;
 import lombok.Builder;
 import lombok.Getter;
 

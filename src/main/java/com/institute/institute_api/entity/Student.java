@@ -1,6 +1,6 @@
-package com.ecocenter.institute_api.entity;
+package com.institute.institute_api.entity;
 
-import com.ecocenter.institute_api.embeddable.Address;
+import com.institute.institute_api.embeddable.Address;
 import jakarta.persistence.*;
 import lombok.*;
 

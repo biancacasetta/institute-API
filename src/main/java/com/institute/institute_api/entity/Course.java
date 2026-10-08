@@ -1,6 +1,6 @@
-package com.ecocenter.institute_api.entity;
+package com.institute.institute_api.entity;
 
-import com.ecocenter.institute_api.embeddable.Timetable;
+import com.institute.institute_api.embeddable.Timetable;
 import jakarta.persistence.*;
 import lombok.*;
 

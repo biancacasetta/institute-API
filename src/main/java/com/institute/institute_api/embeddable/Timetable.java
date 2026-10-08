@@ -1,4 +1,4 @@
-package com.ecocenter.institute_api.embeddable;
+package com.institute.institute_api.embeddable;
 
 import jakarta.persistence.*;
 import lombok.*;
