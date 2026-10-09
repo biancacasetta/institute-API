@@ -4,14 +4,13 @@ import com.institute.institute_api.dto.student.StudentRequestDTO;
 import com.institute.institute_api.dto.student.StudentResponseDTO;
 import com.institute.institute_api.entity.Course;
 import com.institute.institute_api.entity.Student;
+import com.institute.institute_api.exception.DuplicateIdException;
 import com.institute.institute_api.repository.CourseRepository;
 import com.institute.institute_api.repository.StudentRepository;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.UUID;
@@ -26,8 +25,7 @@ public class StudentService {
     @Transactional
     public StudentResponseDTO createStudent(StudentRequestDTO req) {
         if (studentRepository.existsByNationalId(req.getNationalId())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Student with this national ID already exists: " + req.getNationalId());
+            throw new DuplicateIdException(req.getNationalId());
         }
 
         Course course = null;
@@ -74,8 +72,7 @@ public class StudentService {
                 .orElseThrow(() -> new EntityNotFoundException("Student ID not found:" + id));
 
         if (studentRepository.existsByNationalIdAndIdNot(req.getNationalId(), id)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Another student already has this national ID: " + req.getNationalId());
+            throw new DuplicateIdException(req.getNationalId());
         }
 
         Course course = null;
