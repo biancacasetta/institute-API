@@ -5,13 +5,13 @@ POST http://localhost:8080/api/students
 Content-Type: application/json
 
 {
-  "id": 12345678,
+  "nationalId": "12345678",
   "firstName": "Juan",
   "lastName": "Perez",
-  "dob": "2005-03-10T00:00:00",
+  "dob": "2005-03-10",
   "email": "juan@example.com",
   "ownPhone": "1122334455",
-  "otherPhone": null,
+  "otherPhone": "",
   "address": {
     "street": "Av. Corrientes",
     "number": 1234,
@@ -21,22 +21,27 @@ Content-Type: application/json
   }
 }
 
+
+> {%
+    client.global.set("studentId", response.body.id);
+%}
+
 ### Get a student by ID
-GET http://localhost:8080/api/students/12345678
+GET http://localhost:8080/api/students/{{studentId}}
 
 ### Get all students
 GET http://localhost:8080/api/students
 
 ### Update Student
-PUT http://localhost:8080/api/students/12345678
+PUT http://localhost:8080/api/students/{{studentId}}
 Content-Type: application/json
 
 {
-  "id": 12345678,
+  "nationalId": "12345678",
   "firstName": "Juan",
   "middleName": "Manuel",
   "lastName": "Perez",
-  "dob": "2005-03-10T00:00:00",
+  "dob": "2005-03-10",
   "email": "juan@example.com",
   "ownPhone": "1122334455",
   "otherPhone": "1122335566",
@@ -50,4 +55,4 @@ Content-Type: application/json
 }
 
 ### Delete Student (hard delete)
-DELETE http://localhost:8080/api/students/12345678
+DELETE http://localhost:8080/api/students/{{studentId}}
