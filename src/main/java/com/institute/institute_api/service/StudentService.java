@@ -8,9 +8,9 @@ import com.institute.institute_api.exception.DuplicateIdException;
 import com.institute.institute_api.repository.CourseRepository;
 import com.institute.institute_api.repository.StudentRepository;
 import jakarta.persistence.EntityNotFoundException;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
@@ -51,14 +51,14 @@ public class StudentService {
         return StudentResponseDTO.from(savedStudent);
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public List<StudentResponseDTO> getAllStudents() {
         return studentRepository.findAll().stream()
                 .map(StudentResponseDTO::from)
                 .toList();
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public StudentResponseDTO getStudentById(UUID id) {
         Student student = studentRepository.findById(id)
                     .orElseThrow(() -> new EntityNotFoundException("Student ID not found:" + id));
@@ -101,8 +101,6 @@ public class StudentService {
         Student student = studentRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Student ID not found:" + id));
         
-        studentRepository.deleteById(id);
+        studentRepository.delete(student);
     }
-
-
 }
