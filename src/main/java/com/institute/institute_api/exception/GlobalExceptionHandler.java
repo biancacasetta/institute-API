@@ -22,10 +22,9 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     // 409 - Conflict (e.g. for duplicates)
-    @ExceptionHandler(DataIntegrityViolationException.class)
-    public ProblemDetail handleIntegrityViolation(DataIntegrityViolationException ex) {
-        return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT,
-                "There is a conflict with existing data.");
+    @ExceptionHandler(ConflictException.class)
+    public ProblemDetail handleConflict(ConflictException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
     }
 
     // 400 - Bad Request (invalid args)
