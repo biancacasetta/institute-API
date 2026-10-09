@@ -17,7 +17,7 @@ db-psql:
 
 db-reset:
 	docker compose down -v
-	db-up
+	docker compose up -d --wait
 
 run: db-up
 	./mvnw spring-boot:run
