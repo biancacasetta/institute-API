@@ -73,7 +73,7 @@ public class StudentService {
         Student student = studentRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Student ID not found:" + id));
 
-        if (studentRepository.otherExistsByNationalId(req.getNationalId(), id)) {
+        if (studentRepository.existsByNationalIdAndIdNot(req.getNationalId(), id)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Another student already has this national ID: " + req.getNationalId());
         }
