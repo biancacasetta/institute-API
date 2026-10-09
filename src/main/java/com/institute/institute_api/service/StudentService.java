@@ -9,9 +9,12 @@ import com.institute.institute_api.repository.StudentRepository;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -22,14 +25,19 @@ public class StudentService {
 
     @Transactional
     public StudentResponseDTO createStudent(StudentRequestDTO req) {
+        if (studentRepository.existsByNationalId(req.getNationalId())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Student with this national ID already exists: " + req.getNationalId());
+        }
+
         Course course = null;
         if (req.getCourseId() != null) {
             course = courseRepository.findById(req.getCourseId())
-                    .orElseThrow(() -> new EntityNotFoundException("Course ID not found:" + req.getCourseId()));
+                    .orElseThrow(() -> new EntityNotFoundException("Course ID not found: " + req.getCourseId()));
         }
 
         Student student = Student.builder()
-                .id(req.getId())
+                .nationalId(req.getNationalId())
                 .firstName(req.getFirstName())
                 .middleName(req.getMiddleName())
                 .lastName(req.getLastName())
@@ -53,7 +61,7 @@ public class StudentService {
     }
 
     @Transactional
-    public StudentResponseDTO getStudentById(Integer id) {
+    public StudentResponseDTO getStudentById(UUID id) {
         Student student = studentRepository.findById(id)
                     .orElseThrow(() -> new EntityNotFoundException("Student ID not found:" + id));
 
@@ -61,9 +69,14 @@ public class StudentService {
     }
 
     @Transactional
-    public StudentResponseDTO updateStudent(StudentRequestDTO req) {
-        Student student = studentRepository.findById(req.getId())
-                .orElseThrow(() -> new EntityNotFoundException("Student ID not found:" + req.getId()));
+    public StudentResponseDTO updateStudent(UUID id, StudentRequestDTO req) {
+        Student student = studentRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Student ID not found:" + id));
+
+        if (studentRepository.otherExistsByNationalId(req.getNationalId(), id)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Another student already has this national ID: " + req.getNationalId());
+        }
 
         Course course = null;
         if (req.getCourseId() != null) {
@@ -71,7 +84,7 @@ public class StudentService {
                     .orElseThrow(() -> new EntityNotFoundException("Course ID not found:" + req.getCourseId()));
         }
 
-        student.setId(req.getId());
+        student.setNationalId(req.getNationalId());
         student.setFirstName(req.getFirstName());
         student.setMiddleName(req.getMiddleName());
         student.setLastName(req.getLastName());
@@ -87,7 +100,7 @@ public class StudentService {
     }
 
     @Transactional
-    public void deleteStudent(Integer id) {
+    public void deleteStudent(UUID id) {
         Student student = studentRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Student ID not found:" + id));
         

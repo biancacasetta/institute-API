@@ -6,15 +6,16 @@ import jakarta.validation.constraints.*;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.UUID;
 
 @Getter
 @Setter
 public class StudentRequestDTO {
 
-    @NotNull
-    private Integer id;
+    @NotBlank
+    @Pattern(regexp = "\\d{8}")
+    private String nationalId;
 
     @NotBlank
     private String firstName;
@@ -26,7 +27,7 @@ public class StudentRequestDTO {
     private String lastName;
 
     @NotNull
-    private LocalDateTime dob;
+    private LocalDate dob;
 
     @Email
     @NotBlank

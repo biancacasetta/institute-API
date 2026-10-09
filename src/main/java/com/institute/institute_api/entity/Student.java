@@ -3,8 +3,8 @@ package com.institute.institute_api.entity;
 import com.institute.institute_api.embeddable.Address;
 import jakarta.persistence.*;
 import lombok.*;
-
-import java.time.LocalDateTime;
+import java.time.LocalDate;
+import java.util.UUID;
 
 @Entity
 @Table(name = "students")
@@ -15,12 +15,16 @@ import java.time.LocalDateTime;
 @Builder
 public class Student {
     @Id
-    private Integer id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
+
+    @Column(unique = true, nullable = false)
+    private String nationalId;
 
     private String firstName;
     private String middleName;
     private String lastName;
-    private LocalDateTime dob;
+    private LocalDate dob;
     private String email;
     private String ownPhone;
     private String otherPhone;
