@@ -2,6 +2,7 @@ package com.institute.institute_api.dto.student;
 
 import com.institute.institute_api.embeddable.Address;
 import jakarta.annotation.Nullable;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -37,6 +38,7 @@ public class StudentRequestDTO {
     private String otherPhone;
 
     @NotNull
+    @Valid
     private Address address;
 
     @Nullable
