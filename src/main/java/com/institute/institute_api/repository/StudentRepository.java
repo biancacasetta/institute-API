@@ -8,4 +8,5 @@ import java.util.UUID;
 public interface StudentRepository extends JpaRepository<Student, UUID> {
     boolean existsByNationalId(String nationalId);
     boolean existsByNationalIdAndIdNot(String nationalId, UUID id);
+    boolean existsByCourseId(UUID courseId);
 }
