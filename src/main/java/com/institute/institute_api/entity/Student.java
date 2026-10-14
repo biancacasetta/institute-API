@@ -13,9 +13,11 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@EqualsAndHashCode
 public class Student {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
+    @EqualsAndHashCode.Include
     private UUID id;
 
     @Column(unique = true, nullable = false)
@@ -32,6 +34,6 @@ public class Student {
     @Embedded
     private Address address;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     private Course course;
 }
