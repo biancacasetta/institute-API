@@ -1,6 +1,8 @@
 package com.institute.institute_api.exception;
 
+import jakarta.annotation.Nonnull;
 import jakarta.persistence.EntityNotFoundException;
+import org.jspecify.annotations.NonNull;
 import org.springframework.http.*;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -10,6 +12,7 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Objects;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
@@ -28,12 +31,17 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     // 400
     @Override
     protected ResponseEntity<Object> handleMethodArgumentNotValid(
-            MethodArgumentNotValidException ex, HttpHeaders headers,
-            HttpStatusCode status, WebRequest request) {
+            @NonNull MethodArgumentNotValidException ex,
+            @NonNull HttpHeaders headers,
+            @NonNull HttpStatusCode status,
+            @NonNull WebRequest request) {
 
         Map<String, String> errors = new LinkedHashMap<>();
         ex.getBindingResult().getFieldErrors().forEach(fe ->
-                errors.merge(fe.getField(), fe.getDefaultMessage(), (a, b) -> a + "; " + b));
+                errors.merge(
+                        fe.getField(),
+                        Objects.requireNonNullElse(fe.getDefaultMessage(), "Invalid value"),
+                        (a, b) -> a + "; " + b));
 
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(
                 HttpStatus.BAD_REQUEST, "Validation failed");
