@@ -1,0 +1,47 @@
+## Course Requests
+
+### Create a course
+POST http://localhost:8080/api/courses
+Content-Type: application/json
+
+{
+  "name": "1er Grado",
+  "fee": 45000.00,
+  "timetables": [
+    {
+      "days": "Mon,Wed",
+      "startTime": "16:00",
+      "endTime": "17:00"
+    }
+  ]
+}
+
+
+> {%
+    client.global.set("courseId", response.body.id);
+%}
+
+### Get a course by ID
+GET http://localhost:8080/api/courses/{{courseId}}
+
+### Get all courses
+GET http://localhost:8080/api/courses
+
+### Update Course
+PUT http://localhost:8080/api/courses/{{courseId}}
+Content-Type: application/json
+
+{
+  "name": "1er Grado",
+  "fee": 50000.00,
+  "timetables": [
+    {
+      "days": "Mon,Wed",
+      "startTime": "16:00",
+      "endTime": "17:00"
+    }
+  ]
+}
+
+### Delete Course (hard delete)
+DELETE http://localhost:8080/api/courses/{{courseId}}
