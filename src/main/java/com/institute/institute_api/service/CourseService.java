@@ -3,6 +3,8 @@ package com.institute.institute_api.service;
 import com.institute.institute_api.dto.course.CourseRequestDTO;
 import com.institute.institute_api.dto.course.CourseResponseDTO;
 import com.institute.institute_api.entity.Course;
+import com.institute.institute_api.exception.CourseNotEmptyException;
+import com.institute.institute_api.exception.DuplicateCourseNameException;
 import com.institute.institute_api.repository.CourseRepository;
 import com.institute.institute_api.repository.StudentRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -21,10 +23,10 @@ public class CourseService {
     private final StudentRepository studentRepository;
 
     @Transactional
-    public CourseResponseDTO createCourse(CourseResponseDTO req) {
-//        if (courseRepository.existsByName(req.getName())) {
-//            throw new DuplicateCourseNameException(req.getId());
-//        }
+    public CourseResponseDTO createCourse(CourseRequestDTO req) {
+        if (courseRepository.existsByName(req.getName())) {
+            throw new DuplicateCourseNameException(req.getName());
+        }
 
         Course course = Course.builder()
                 .name(req.getName())
@@ -43,11 +45,6 @@ public class CourseService {
                 .toList();
     }
 
-    private Course findCourse(UUID id) {
-        return courseRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Course ID not found:" + id));
-    }
-
     @Transactional(readOnly = true)
     public CourseResponseDTO getCourseById(UUID id) {
         Course course = findCourse(id);
@@ -57,9 +54,9 @@ public class CourseService {
     @Transactional
     public CourseResponseDTO updateCourse(UUID id, CourseRequestDTO req) {
         Course course = findCourse(id);
-//        if (courseRepository.existsByNameAndIdNot(req.getName(), id)) {
-//            throw new DuplicateCourseNameException(req.getName());
-//        }
+        if (courseRepository.existsByNameAndIdNot(req.getName(), id)) {
+            throw new DuplicateCourseNameException(req.getName());
+        }
 
         course.setName(req.getName());
         course.setFee(req.getFee());
@@ -72,11 +69,15 @@ public class CourseService {
     @Transactional
     public void deleteCourse(UUID id) {
         Course course = findCourse(id);
-
-//        if (studentRepository.existsByCourseId(id)) {
-//            throw new CourseNotEmptyException();
-//        }
+        if (studentRepository.existsByCourseId(id)) {
+            throw new CourseNotEmptyException(course.getName());
+        }
 
         courseRepository.delete(course);
+    }
+
+    private Course findCourse(UUID id) {
+        return courseRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Course ID not found:" + id));
     }
 }
