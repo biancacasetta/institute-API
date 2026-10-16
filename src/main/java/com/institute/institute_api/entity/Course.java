@@ -24,6 +24,7 @@ public class Course {
     @EqualsAndHashCode.Include
     private UUID id;
 
+    @Column(unique = true, nullable = false)
     private String name;
     private BigDecimal fee;
 
