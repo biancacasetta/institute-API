@@ -4,7 +4,7 @@ import com.institute.institute_api.dto.student.StudentRequestDTO;
 import com.institute.institute_api.dto.student.StudentResponseDTO;
 import com.institute.institute_api.entity.Course;
 import com.institute.institute_api.entity.Student;
-import com.institute.institute_api.exception.DuplicateIdException;
+import com.institute.institute_api.exception.DuplicateNationalIdException;
 import com.institute.institute_api.repository.CourseRepository;
 import com.institute.institute_api.repository.StudentRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -25,7 +25,7 @@ public class StudentService {
     @Transactional
     public StudentResponseDTO createStudent(StudentRequestDTO req) {
         if (studentRepository.existsByNationalId(req.getNationalId())) {
-            throw new DuplicateIdException(req.getNationalId());
+            throw new DuplicateNationalIdException(req.getNationalId());
         }
 
         Course course = null;
@@ -72,7 +72,7 @@ public class StudentService {
                 .orElseThrow(() -> new EntityNotFoundException("Student ID not found:" + id));
 
         if (studentRepository.existsByNationalIdAndIdNot(req.getNationalId(), id)) {
-            throw new DuplicateIdException(req.getNationalId());
+            throw new DuplicateNationalIdException(req.getNationalId());
         }
 
         Course course = null;
