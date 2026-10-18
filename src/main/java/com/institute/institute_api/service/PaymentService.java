@@ -1,5 +1,6 @@
 package com.institute.institute_api.service;
 
+import com.institute.institute_api.dto.payment.PaymentRequestDTO;
 import com.institute.institute_api.dto.payment.PaymentResponseDTO;
 import com.institute.institute_api.entity.Payment;
 import com.institute.institute_api.entity.Student;
@@ -26,7 +27,7 @@ public class PaymentService {
     private ZoneId zone;
 
     @Transactional
-    public PaymentResponseDTO createPayment(PaymentResponseDTO req) {
+    public PaymentResponseDTO createPayment(PaymentRequestDTO req) {
         Student student = findStudent(req.getStudentId());
 
         Payment payment = Payment.builder()
@@ -65,7 +66,7 @@ public class PaymentService {
     }
 
     @Transactional
-    public PaymentResponseDTO updatePayment(UUID id, PaymentResponseDTO req) {
+    public PaymentResponseDTO updatePayment(UUID id, PaymentRequestDTO req) {
         Payment payment = findPayment(id);
         Student student = findStudent(req.getStudentId());
 
