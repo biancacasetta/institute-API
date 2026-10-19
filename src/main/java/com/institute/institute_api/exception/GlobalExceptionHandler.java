@@ -28,7 +28,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
     }
 
-    // 400
+    // 400 (bean validation)
     @Override
     protected ResponseEntity<Object> handleMethodArgumentNotValid(
             @NonNull MethodArgumentNotValidException ex,
@@ -48,5 +48,11 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         problem.setProperty("errors", errors);
 
         return handleExceptionInternal(ex, problem, headers, status, request);
+    }
+
+    // 400 (domain exceptions)
+    @ExceptionHandler(BadRequestException.class)
+    public ProblemDetail handleBadRequest(BadRequestException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 }

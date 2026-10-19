@@ -34,7 +34,7 @@ make run
 - [x] Global error handling
 - [x] Basic Student CRUD operations
 - [x] Basic Course CRUD operations
-- [ ] Basic Payment CRUD operations
+- [x] Basic Payment CRUD operations
 - [ ] Admin authentication
 - [ ] API docs
 - [ ] Database migrations

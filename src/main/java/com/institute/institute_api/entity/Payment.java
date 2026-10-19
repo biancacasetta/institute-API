@@ -23,6 +23,7 @@ public class Payment {
     private LocalDate date;
     private BigDecimal amount;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "student_id", nullable = false)
     private Student student;
 }
