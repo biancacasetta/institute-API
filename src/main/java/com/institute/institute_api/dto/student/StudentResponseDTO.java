@@ -1,5 +1,6 @@
 package com.institute.institute_api.dto.student;
 
+import com.institute.institute_api.dto.course.CourseSummaryDTO;
 import com.institute.institute_api.embeddable.Address;
 import com.institute.institute_api.entity.Student;
 import lombok.Builder;
@@ -21,6 +22,7 @@ public class StudentResponseDTO {
     private String ownPhone;
     private String otherPhone;
     private Address address;
+    private CourseSummaryDTO course;
 
     public static StudentResponseDTO from(Student student) {
         return StudentResponseDTO.builder()
@@ -34,6 +36,7 @@ public class StudentResponseDTO {
                 .ownPhone(student.getOwnPhone())
                 .otherPhone(student.getOtherPhone())
                 .address(student.getAddress())
+                .course(student.getCourse() == null ? null : CourseSummaryDTO.from(student.getCourse()))
                 .build();
     }
 }
