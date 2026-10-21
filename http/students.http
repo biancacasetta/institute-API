@@ -30,7 +30,7 @@ Content-Type: application/json
 GET http://localhost:8080/api/students/{{studentId}}
 
 ### Get all students
-GET http://localhost:8080/api/students
+GET http://localhost:8080/api/students?page=0&size=10&sort=lastName,asc
 
 ### Update Student
 PUT http://localhost:8080/api/students/{{studentId}}
