@@ -9,6 +9,8 @@ import com.institute.institute_api.repository.CourseRepository;
 import com.institute.institute_api.repository.StudentRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -52,24 +54,20 @@ public class StudentService {
     }
 
     @Transactional(readOnly = true)
-    public List<StudentResponseDTO> getAllStudents() {
-        return studentRepository.findAll().stream()
-                .map(StudentResponseDTO::from)
-                .toList();
+    public Page<StudentResponseDTO> getAllStudents(Pageable pageable) {
+        return studentRepository.findAll(pageable)
+                .map(StudentResponseDTO::from);
     }
 
     @Transactional(readOnly = true)
     public StudentResponseDTO getStudentById(UUID id) {
-        Student student = studentRepository.findById(id)
-                    .orElseThrow(() -> new EntityNotFoundException("Student ID not found:" + id));
-
+        Student student = findStudent(id);
         return StudentResponseDTO.from(student);
     }
 
     @Transactional
     public StudentResponseDTO updateStudent(UUID id, StudentRequestDTO req) {
-        Student student = studentRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Student ID not found:" + id));
+        Student student = findStudent(id);
 
         if (studentRepository.existsByNationalIdAndIdNot(req.getNationalId(), id)) {
             throw new DuplicateNationalIdException(req.getNationalId());
@@ -98,9 +96,12 @@ public class StudentService {
 
     @Transactional
     public void deleteStudent(UUID id) {
-        Student student = studentRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Student ID not found:" + id));
-        
+        Student student = findStudent(id);
         studentRepository.delete(student);
+    }
+
+    private Student findStudent(UUID id) {
+        return studentRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Student ID not found: " + id));
     }
 }
