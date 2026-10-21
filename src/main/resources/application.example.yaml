@@ -19,3 +19,5 @@ spring:
 
 institute:
   timezone: UTC
+  cors:
+    allowed-origins: http://example.domain
