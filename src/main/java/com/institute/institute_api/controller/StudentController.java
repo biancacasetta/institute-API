@@ -5,10 +5,13 @@ import com.institute.institute_api.dto.student.StudentResponseDTO;
 import com.institute.institute_api.service.StudentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.data.web.PagedModel;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -25,9 +28,10 @@ public class StudentController {
     }
 
     @GetMapping
-    public ResponseEntity<List<StudentResponseDTO>> getAllStudents() {
-        List<StudentResponseDTO> students = studentService.getAllStudents();
-        return ResponseEntity.ok(students);
+    public ResponseEntity<PagedModel<StudentResponseDTO>> getAllStudents(
+        @PageableDefault(size = 20, sort = {"lastName", "firstName"}) Pageable pageable) {
+            Page<StudentResponseDTO> students = studentService.getAllStudents(pageable);
+            return ResponseEntity.ok(new PagedModel<>(students));
     }
 
     @GetMapping("/{id}")
