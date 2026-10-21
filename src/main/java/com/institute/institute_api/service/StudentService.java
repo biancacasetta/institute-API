@@ -5,7 +5,9 @@ import com.institute.institute_api.dto.student.StudentResponseDTO;
 import com.institute.institute_api.entity.Course;
 import com.institute.institute_api.entity.Student;
 import com.institute.institute_api.exception.DuplicateNationalIdException;
+import com.institute.institute_api.exception.StudentHasPaymentsException;
 import com.institute.institute_api.repository.CourseRepository;
+import com.institute.institute_api.repository.PaymentRepository;
 import com.institute.institute_api.repository.StudentRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +24,7 @@ public class StudentService {
 
     private final StudentRepository studentRepository;
     private final CourseRepository courseRepository;
+    private final PaymentRepository paymentRepository;
 
     @Transactional
     public StudentResponseDTO createStudent(StudentRequestDTO req) {
@@ -85,6 +88,9 @@ public class StudentService {
     @Transactional
     public void deleteStudent(UUID id) {
         Student student = findStudent(id);
+        if (paymentRepository.existsByStudentId(id)) {
+            throw new StudentHasPaymentsException(student.getFirstName() + " " + student.getLastName());
+        }
         studentRepository.delete(student);
     }
 
