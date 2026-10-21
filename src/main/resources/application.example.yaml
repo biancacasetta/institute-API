@@ -9,6 +9,13 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: true
+  web:
+    error:
+      include-message: always
+  data:
+    web:
+      pageable:
+        max-page-size: 100
 
 institute:
   timezone: UTC
