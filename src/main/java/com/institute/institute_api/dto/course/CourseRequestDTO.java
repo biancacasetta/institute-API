@@ -1,6 +1,7 @@
 package com.institute.institute_api.dto.course;
 
 import com.institute.institute_api.embeddable.Timetable;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -20,5 +21,6 @@ public class CourseRequestDTO {
     @Positive
     private BigDecimal fee;
     @NotNull
+    @Valid
     private List<Timetable> timetables = new ArrayList<>();
 }
