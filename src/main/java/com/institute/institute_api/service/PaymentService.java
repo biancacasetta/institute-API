@@ -55,7 +55,7 @@ public class PaymentService {
         }
 
         return paymentRepository.findByStudentIdAndDateBetweenOrderByDateDesc(
-                studentId, from, to).stream()
+                studentId, start, end).stream()
                 .map(PaymentResponseDTO::from)
                 .toList();
     }

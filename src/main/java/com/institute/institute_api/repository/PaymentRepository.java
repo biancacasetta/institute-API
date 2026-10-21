@@ -13,4 +13,5 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
     List<Payment> findByStudentIdAndDateBetweenOrderByDateDesc(
             UUID studentId, LocalDate from, LocalDate to
     );
+    boolean existsByStudentId(UUID studentId);
 }
