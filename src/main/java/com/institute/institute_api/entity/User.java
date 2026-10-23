@@ -16,6 +16,7 @@ import java.util.UUID;
 public class User {
     public enum Role {
         ADMIN,
+        TEACHER,
         STUDENT
     }
 
