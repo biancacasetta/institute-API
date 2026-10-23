@@ -21,3 +21,12 @@ institute:
   timezone: UTC
   cors:
     allowed-origins: http://example.domain
+  admin:
+    username: your_admin_username
+    password: your_admin_password
+  auth:
+    secret: "replace-with-a-random-secret-of-at-least-32-characters"
+    access-token-ttl: 15m
+    refresh-token-ttl: 7d
+    cookie-secure: false
+    cookie-same-site: Strict
