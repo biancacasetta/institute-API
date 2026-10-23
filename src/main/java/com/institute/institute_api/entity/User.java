@@ -14,6 +14,11 @@ import java.util.UUID;
 @Builder
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class User {
+    public enum Role {
+        ADMIN,
+        STUDENT
+    }
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @EqualsAndHashCode.Include
