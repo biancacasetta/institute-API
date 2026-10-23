@@ -2,6 +2,7 @@ package com.institute.institute_api.security;
 
 import com.institute.institute_api.entity.User;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
+import org.springframework.context.annotation.Bean;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.*;
 import org.springframework.stereotype.Service;
@@ -13,7 +14,7 @@ import java.time.Instant;
 
 @Service
 public class JwtService {
-    private static final String ROLE_CLAIM = "role";
+    public static final String ROLE_CLAIM = "role";
     private final AuthProperties props;
     private final JwtEncoder jwtEncoder;
     private final JwtDecoder jwtDecoder;
