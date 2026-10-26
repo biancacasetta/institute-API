@@ -89,7 +89,7 @@ public class AuthService {
                 .ifPresent(token -> token.setRevoked(true));
     }
 
-    @Scheduled
+    @Scheduled(cron = "0 0 3 * * *")
     @Transactional
     public void deleteExpiredTokens() {
         int deleted = refreshTokenRepository.deleteExpired(Instant.now());
