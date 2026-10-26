@@ -128,17 +128,45 @@ public class CourseServiceTest {
 
     @Test
     void updateCourse_validRequest_savesAndReturnsUpdatedDto() {
+        Course course = mockCourse();
+        Timetable newTimetable = mockTimetable("Wed,Fri");
+        CourseRequestDTO req = mockCourseRequest("2nd Grade", BigDecimal.valueOf(50000.00), newTimetable);
 
+        when(courseRepository.findById(COURSE_ID)).thenReturn(Optional.of(course));
+        when(courseRepository.existsByNameAndIdNot("2nd Grade", COURSE_ID)).thenReturn(false);
+
+        CourseResponseDTO result = courseService.updateCourse(COURSE_ID, req);
+
+        assertThat(course.getName()).isEqualTo("2nd Grade");
+        assertThat(course.getFee()).isEqualByComparingTo("50000.00");
+        assertThat(course.getTimetables()).containsExactly(newTimetable);
+
+        assertThat(result.getName()).isEqualTo("2nd Grade");
     }
 
     @Test
     void updateCourse_duplicateCourseName_throwsAndDoesNotUpdate() {
+        Timetable newTimetable = mockTimetable("Wed,Fri");
+        CourseRequestDTO req = mockCourseRequest("2nd Grade", BigDecimal.valueOf(50000.00), newTimetable);
 
+        when(courseRepository.findById(COURSE_ID)).thenReturn(Optional.of(mockCourse()));
+        when(courseRepository.existsByNameAndIdNot("2nd Grade", COURSE_ID)).thenReturn(true);
+
+        assertThatThrownBy(() -> courseService.updateCourse(COURSE_ID, req))
+                .isInstanceOf(DuplicateCourseNameException.class)
+                .hasMessageContaining("2nd Grade");
     }
 
     @Test
     void updateCourse_doesNotExist_throwsNotFound() {
+        Timetable newTimetable = mockTimetable("Wed,Fri");
+        CourseRequestDTO req = mockCourseRequest("2nd Grade", BigDecimal.valueOf(50000.00), newTimetable);
 
+        when(courseRepository.findById(COURSE_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> courseService.updateCourse(COURSE_ID, req))
+                .isInstanceOf(EntityNotFoundException.class)
+                .hasMessageContaining(COURSE_ID.toString());
     }
 
     // delete
