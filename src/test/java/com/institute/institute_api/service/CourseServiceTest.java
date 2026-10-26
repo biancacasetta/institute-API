@@ -118,8 +118,6 @@ public class CourseServiceTest {
     void getCourseById_doesNotExist_throwsNotFound() {
         when(courseRepository.findById(COURSE_ID)).thenReturn(Optional.empty());
 
-        CourseResponseDTO result = courseService.getCourseById(COURSE_ID);
-
         assertThatThrownBy(() -> courseService.getCourseById(COURSE_ID))
                 .isInstanceOf(EntityNotFoundException.class)
                 .hasMessageContaining(COURSE_ID.toString());
