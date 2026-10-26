@@ -6,7 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.assertj.MockMvcTester;
 
 import java.util.UUID;
 
@@ -17,44 +17,44 @@ public class CourseControllerTest {
     private static final UUID COURSE_ID = UUID.randomUUID();
 
     @Autowired
-    private MockMvc mockMvc;
+    private MockMvcTester mvcTester;
     @MockitoBean
     private CourseService courseService;
 
     // POST
 
     @Test
-    void createCourse_validRequest_returns201AndBody() throws Exception {
+    void createCourse_validRequest_returns201AndBody() {
 
     }
 
     @Test
-    void createCourse_validRequest_passesParsedJsonToService() throws Exception {
+    void createCourse_validRequest_passesParsedJsonToService() {
 
     }
 
     @Test
-    void createCourse_negativeFee_returns400WithFieldError() throws Exception {
+    void createCourse_negativeFee_returns400WithFieldError() {
 
     }
 
     @Test
-    void createCourse_nullTimetables_returns400WithFieldError() throws Exception {
+    void createCourse_nullTimetables_returns400WithFieldError() {
 
     }
 
     @Test
-    void createCourse_invalidNestedTimetable_returns400WithNestedFieldError() throws Exception {
+    void createCourse_invalidNestedTimetable_returns400WithNestedFieldError() {
 
     }
 
     @Test
-    void createCourse_malformedTime_returns400() throws Exception {
+    void createCourse_malformedTime_returns400() {
 
     }
 
     @Test
-    void createCourse_duplicateName_returns409() throws Exception {
+    void createCourse_duplicateName_returns409() {
 
     }
 }
