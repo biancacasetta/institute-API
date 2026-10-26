@@ -1,0 +1,26 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+  web:
+    error:
+      include-message: always
+  data:
+    web:
+      pageable:
+        max-page-size: 100
+
+institute:
+  timezone: UTC
+  cors:
+    allowed-origins: http://localhost:5173
+  admin:
+    username: test-admin
+    password: test-password
+  auth:
+    secret: "test-secret-that-is-at-least-32-characters-long"
+    access-token-ttl: 15m
+    refresh-token-ttl: 7d
+    cookie-secure: false
+    cookie-same-site: Strict
