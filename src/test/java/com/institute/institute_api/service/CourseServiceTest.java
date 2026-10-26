@@ -41,6 +41,8 @@ public class CourseServiceTest {
     @InjectMocks
     private CourseService courseService;
 
+    // TODO: Add test cases on case sensitivity for Course name once implemented in CourseService
+
     // test naming convention: method_condition_expectation()
 
     // create
