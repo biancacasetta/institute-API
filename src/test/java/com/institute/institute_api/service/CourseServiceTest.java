@@ -6,6 +6,7 @@ import com.institute.institute_api.dto.course.CourseRequestDTO;
 import com.institute.institute_api.dto.course.CourseResponseDTO;
 import com.institute.institute_api.embeddable.Timetable;
 import com.institute.institute_api.entity.Course;
+import com.institute.institute_api.exception.DuplicateCourseNameException;
 import com.institute.institute_api.repository.CourseRepository;
 import com.institute.institute_api.repository.StudentRepository;
 import org.junit.jupiter.api.Test;
@@ -22,9 +23,9 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class CourseServiceTest {
@@ -77,7 +78,17 @@ public class CourseServiceTest {
 
     @Test
     void createCourse_duplicateCourseName_throwsAndDoesNotSave() {
+        Timetable timetable = testTimetable("Mon,Wed", "16:00", "17:00");
+        List<Timetable> timetables = new ArrayList<>(List.of(timetable));
+        CourseRequestDTO req = testCourseRequest("1st Grade", BigDecimal.valueOf(45000.00), timetables);
 
+        when(courseRepository.existsByName("1st Grade")).thenReturn(true);
+
+        assertThatThrownBy(() -> courseService.createCourse(req))
+                .isInstanceOf(DuplicateCourseNameException.class)
+                .hasMessageContaining("1st Grade");
+
+        verify(courseRepository, never()).save(any());
     }
 
     // get
