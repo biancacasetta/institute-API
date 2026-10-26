@@ -24,6 +24,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.InstanceOfAssertFactories.LIST;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -45,9 +46,8 @@ public class CourseServiceTest {
     @Test
     void createCourse_validRequest_savesAndReturnsDto() {
         // create request DTO
-        Timetable timetable = testTimetable("Mon,Wed", "16:00", "17:00");
-        List<Timetable> timetables = new ArrayList<>(List.of(timetable));
-        CourseRequestDTO req = testCourseRequest("1st Grade", BigDecimal.valueOf(45000.00), timetables);
+        Timetable timetable = mockTimetable("Mon,Wed");
+        CourseRequestDTO req = mockCourseRequest("1st Grade", BigDecimal.valueOf(45000.00), timetable);
 
         // simulate calls to repo methods
         when(courseRepository.existsByName("1st Grade")).thenReturn(false);
@@ -58,7 +58,7 @@ public class CourseServiceTest {
         });
 
         // receive response DTO
-        CourseResponseDTO response = courseService.createCourse(req);
+        CourseResponseDTO result = courseService.createCourse(req);
 
         // get saved Course
         ArgumentCaptor<Course> captor = ArgumentCaptor.forClass(Course.class);
@@ -70,17 +70,16 @@ public class CourseServiceTest {
         assertThat(saved.getFee()).isEqualByComparingTo("45000.00");
         assertThat(saved.getTimetables()).containsExactly(timetable);
 
-        assertThat(response.getId()).isEqualTo(COURSE_ID);
-        assertThat(response.getName()).isEqualTo("1st Grade");
-        assertThat(response.getFee()).isEqualByComparingTo("45000.00");
-        assertThat(response.getTimetables()).containsExactly(timetable);
+        assertThat(result.getId()).isEqualTo(COURSE_ID);
+        assertThat(result.getName()).isEqualTo("1st Grade");
+        assertThat(result.getFee()).isEqualByComparingTo("45000.00");
+        assertThat(result.getTimetables()).containsExactly(timetable);
     }
 
     @Test
     void createCourse_duplicateCourseName_throwsAndDoesNotSave() {
-        Timetable timetable = testTimetable("Mon,Wed", "16:00", "17:00");
-        List<Timetable> timetables = new ArrayList<>(List.of(timetable));
-        CourseRequestDTO req = testCourseRequest("1st Grade", BigDecimal.valueOf(45000.00), timetables);
+        Timetable timetable = mockTimetable("Tue,Thu");
+        CourseRequestDTO req = mockCourseRequest("1st Grade", BigDecimal.valueOf(45000.00), timetable);
 
         when(courseRepository.existsByName("1st Grade")).thenReturn(true);
 
@@ -95,7 +94,12 @@ public class CourseServiceTest {
 
     @Test
     void getAllCourses_returnsMappedDtoList() {
+        when(courseRepository.findAll()).thenReturn(List.of(mockCourse()));
 
+        List<CourseResponseDTO> result = courseService.getAllCourses();
+
+        assertThat(result).hasSize(1);
+        assertThat(result.getFirst().getName()).isEqualTo("1st Grade");
     }
 
     @Test
@@ -144,20 +148,31 @@ public class CourseServiceTest {
 
     // helpers
 
-    private static CourseRequestDTO testCourseRequest(String name, BigDecimal fee, List<Timetable> timetables) {
+    private static CourseRequestDTO mockCourseRequest(String name, BigDecimal fee, Timetable... timetable) {
         CourseRequestDTO req = new CourseRequestDTO();
         req.setName(name);
         req.setFee(fee);
-        req.setTimetables(timetables);
+        req.setTimetables(new ArrayList<>(List.of(timetable)));
 
         return req;
     }
 
-    private static Timetable testTimetable(String days, String startTime, String endTime) {
+    private static Timetable mockTimetable(String days) {
         return Timetable.builder()
                 .days(days)
-                .startTime(LocalTime.parse(startTime))
-                .endTime(LocalTime.parse(endTime))
+                .startTime(LocalTime.parse("16:00"))
+                .endTime(LocalTime.parse("17:00"))
+                .build();
+    }
+
+    private static Course mockCourse() {
+        return Course.builder()
+                .id(COURSE_ID)
+                .name("1st Grade")
+                .fee(BigDecimal.valueOf(45000.00))
+                .timetables(new ArrayList<>(List.of(mockTimetable(
+                        "Mon,Fri"
+                ))))
                 .build();
     }
 }
