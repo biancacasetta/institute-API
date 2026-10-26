@@ -6,6 +6,7 @@ import com.institute.institute_api.dto.course.CourseRequestDTO;
 import com.institute.institute_api.dto.course.CourseResponseDTO;
 import com.institute.institute_api.embeddable.Timetable;
 import com.institute.institute_api.entity.Course;
+import com.institute.institute_api.exception.CourseNotEmptyException;
 import com.institute.institute_api.exception.DuplicateCourseNameException;
 import com.institute.institute_api.repository.CourseRepository;
 import com.institute.institute_api.repository.StudentRepository;
@@ -173,17 +174,34 @@ public class CourseServiceTest {
 
     @Test
     void deleteCourse_empty_deletesCourse() {
+        Course course = mockCourse();
+        when(courseRepository.findById(COURSE_ID)).thenReturn(Optional.of(course));
+        when(studentRepository.existsByCourseId(COURSE_ID)).thenReturn(false);
 
+        courseService.deleteCourse(COURSE_ID);
+
+        verify(courseRepository).delete(course);
     }
 
     @Test
     void deleteCourse_notEmpty_throwsAndDoesNotDelete() {
+        when(courseRepository.findById(COURSE_ID)).thenReturn(Optional.of(mockCourse()));
+        when(studentRepository.existsByCourseId(COURSE_ID)).thenReturn(true);
 
+        assertThatThrownBy(() -> courseService.deleteCourse(COURSE_ID))
+                .isInstanceOf(CourseNotEmptyException.class)
+                .hasMessageContaining("1st Grade");
+
+        verify(courseRepository, never()).delete(any());
     }
 
     @Test
     void deleteCourse_doesNotExist_throwsNotFound() {
+        when(courseRepository.findById(COURSE_ID)).thenReturn(Optional.empty());
 
+        assertThatThrownBy(() -> courseService.deleteCourse(COURSE_ID))
+                .isInstanceOf(EntityNotFoundException.class)
+                .hasMessageContaining(COURSE_ID.toString());
     }
 
     // helpers
