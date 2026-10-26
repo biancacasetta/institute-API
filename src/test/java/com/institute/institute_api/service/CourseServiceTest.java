@@ -9,6 +9,7 @@ import com.institute.institute_api.entity.Course;
 import com.institute.institute_api.exception.DuplicateCourseNameException;
 import com.institute.institute_api.repository.CourseRepository;
 import com.institute.institute_api.repository.StudentRepository;
+import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -20,11 +21,11 @@ import java.math.BigDecimal;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.api.InstanceOfAssertFactories.LIST;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -104,12 +105,23 @@ public class CourseServiceTest {
 
     @Test
     void getCourseById_exists_returnsDto() {
+        when(courseRepository.findById(COURSE_ID)).thenReturn(Optional.of(mockCourse()));
 
+        CourseResponseDTO result = courseService.getCourseById(COURSE_ID);
+
+        assertThat(result.getId()).isEqualTo(COURSE_ID);
+        assertThat(result.getFee()).isEqualByComparingTo("45000.00");
     }
 
     @Test
     void getCourseById_doesNotExist_throwsNotFound() {
+        when(courseRepository.findById(COURSE_ID)).thenReturn(Optional.empty());
 
+        CourseResponseDTO result = courseService.getCourseById(COURSE_ID);
+
+        assertThatThrownBy(() -> courseService.getCourseById(COURSE_ID))
+                .isInstanceOf(EntityNotFoundException.class)
+                .hasMessageContaining(COURSE_ID.toString());
     }
 
     // update
