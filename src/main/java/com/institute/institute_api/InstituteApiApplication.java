@@ -7,6 +7,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
 @EnableScheduling
+@ConfigurationPropertiesScan
 public class InstituteApiApplication {
 
 	public static void main(String[] args) {

@@ -1,5 +1,6 @@
 package com.institute.institute_api.service;
 
+import com.institute.institute_api.config.InstituteProperties;
 import com.institute.institute_api.dto.payment.PaymentRequestDTO;
 import com.institute.institute_api.dto.payment.PaymentResponseDTO;
 import com.institute.institute_api.entity.Payment;
@@ -23,8 +24,7 @@ import java.util.UUID;
 public class PaymentService {
     private final PaymentRepository paymentRepository;
     private final StudentRepository studentRepository;
-    @Value("${institute.timezone}")
-    private ZoneId zone;
+    private final InstituteProperties props;
 
     @Transactional
     public PaymentResponseDTO createPayment(PaymentRequestDTO req) {
@@ -42,7 +42,7 @@ public class PaymentService {
 
     @Transactional(readOnly = true)
     public List<PaymentResponseDTO> getAllPaymentsByStudent(UUID studentId, LocalDate from, LocalDate to) {
-        int year = LocalDate.now(zone).getYear();
+        int year = LocalDate.now(props.timezone()).getYear();
         LocalDate start = from != null ? from : LocalDate.of(year, 1, 1);
         LocalDate end = to != null ? to : LocalDate.of(year, 12, 31);
 
