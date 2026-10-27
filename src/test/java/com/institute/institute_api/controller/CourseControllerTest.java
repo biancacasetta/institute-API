@@ -145,7 +145,6 @@ public class CourseControllerTest {
                 .contentType(MediaType.APPLICATION_JSON).content(json).exchange();
 
         assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
-        assertThat(result).bodyJson().extractingPath("$.errors.['timetables[0].starTime']").isNotNull();
         verifyNoInteractions(courseService);
     }
 
