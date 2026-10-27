@@ -35,7 +35,7 @@ public class CourseControllerTest {
 
     private static final String BODY_CONTENT = """
             {
-              "name": "1er Grado",
+              "name": "1er Grade",
               "fee": 45000.00,
               "timetables": [
                 {
