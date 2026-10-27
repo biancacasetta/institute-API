@@ -35,11 +35,11 @@ make run
 - [x] Basic Student CRUD operations
 - [x] Basic Course CRUD operations
 - [x] Basic Payment CRUD operations
-- [ ] Admin authentication
+- [x] Admin authentication
+- [x] CI: GitHub Actions running tests on push/PR
+- [ ] Automated tests fully covering the API - *IN PROGRESS*
 - [ ] API docs
 - [ ] Database migrations
-- [ ] Automated tests fully covering the API
-- [ ] CI: GitHub Actions running tests on push/PR
 - [ ] Basic React frontend functionality
 - [ ] Deployment
 
