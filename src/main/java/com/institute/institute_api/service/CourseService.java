@@ -22,6 +22,8 @@ public class CourseService {
     private final CourseRepository courseRepository;
     private final StudentRepository studentRepository;
 
+    // TODO: normalise Course names to lowercase and trim
+
     @Transactional
     public CourseResponseDTO createCourse(CourseRequestDTO req) {
         if (courseRepository.existsByName(req.getName())) {
