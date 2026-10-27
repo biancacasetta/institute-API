@@ -161,6 +161,28 @@ public class CourseControllerTest {
                         .isEqualTo("A course named \"1st Grade\" already exists.");
     }
 
+    // GET
+
+    @Test
+    void getAllCourses_returns200AndDtoList() {
+
+    }
+
+    @Test
+    void getCourseById_exists_returns200() {
+
+    }
+
+    @Test
+    void getCourseById_doesNotExist_returns404() {
+
+    }
+
+    @Test
+    void getCourseById_invalidUuid_returns400() {
+
+    }
+
     // helpers
 
     private static CourseResponseDTO mockResponse() {
