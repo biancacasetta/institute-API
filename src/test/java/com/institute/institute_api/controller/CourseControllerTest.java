@@ -5,6 +5,7 @@ import com.institute.institute_api.dto.course.CourseResponseDTO;
 import com.institute.institute_api.embeddable.Timetable;
 import com.institute.institute_api.exception.DuplicateCourseNameException;
 import com.institute.institute_api.service.CourseService;
+import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -165,21 +166,62 @@ public class CourseControllerTest {
 
     @Test
     void getAllCourses_returns200AndDtoList() {
+        when(courseService.getAllCourses()).thenReturn(List.of(mockResponse()));
 
+        MvcTestResult result = mvcTester.get().uri(BASE_URL).exchange();
+
+        assertThat(result).hasStatusOk();
+        assertThat(result).bodyJson().extractingPath("$").asArray().hasSize(1);
+        assertThat(result).bodyJson().extractingPath("$[0].name").isEqualTo("1st Grade");
     }
 
     @Test
     void getCourseById_exists_returns200() {
+        when(courseService.getCourseById(COURSE_ID)).thenReturn(mockResponse());
 
+        MvcTestResult result = mvcTester.get()
+                .uri(BASE_URL + "/{id}", COURSE_ID).exchange();
+
+        assertThat(result).hasStatusOk();
+        assertThat(result).bodyJson().extractingPath("$.id").isEqualTo(COURSE_ID.toString());
     }
 
     @Test
     void getCourseById_doesNotExist_returns404() {
+        when(courseService.getCourseById(COURSE_ID))
+                .thenThrow(new EntityNotFoundException("Course ID not found: " + COURSE_ID));
 
+        MvcTestResult result = mvcTester.get()
+                .uri(BASE_URL + "/{id}", COURSE_ID).exchange();
+
+        assertThat(result).hasStatus(HttpStatus.NOT_FOUND);
+        assertThat(result).bodyJson().extractingPath("$.detail")
+                .isEqualTo("Course ID not found: " + COURSE_ID);
     }
 
     @Test
     void getCourseById_invalidUuid_returns400() {
+        MvcTestResult result = mvcTester.get()
+                .uri(BASE_URL + "/{id}", "invalid-uuid-format").exchange();
+
+        assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+        verifyNoInteractions(courseService);
+    }
+
+    // PUT
+
+    @Test
+    void updateCourse_validRequest_returns200() {
+
+    }
+
+    @Test
+    void updateCourse_duplicateName_returns409() {
+
+    }
+
+    @Test
+    void updateCourse_doesNotExist_returns404() {
 
     }
 
