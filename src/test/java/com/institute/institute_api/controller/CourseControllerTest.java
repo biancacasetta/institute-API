@@ -3,6 +3,7 @@ package com.institute.institute_api.controller;
 import com.institute.institute_api.dto.course.CourseRequestDTO;
 import com.institute.institute_api.dto.course.CourseResponseDTO;
 import com.institute.institute_api.embeddable.Timetable;
+import com.institute.institute_api.exception.CourseNotEmptyException;
 import com.institute.institute_api.exception.DuplicateCourseNameException;
 import com.institute.institute_api.service.CourseService;
 import jakarta.persistence.EntityNotFoundException;
@@ -212,17 +213,73 @@ public class CourseControllerTest {
 
     @Test
     void updateCourse_validRequest_returns200() {
+        when(courseService.updateCourse(
+                eq(COURSE_ID), any(CourseRequestDTO.class))).thenReturn(mockResponse());
 
+        MvcTestResult result = mvcTester.put().uri(BASE_URL + "/{id}", COURSE_ID)
+                .contentType(MediaType.APPLICATION_JSON).content(BODY_CONTENT).exchange();
+
+        assertThat(result).hasStatusOk();
+        assertThat(result).bodyJson().extractingPath("$.id").isEqualTo(COURSE_ID.toString());
     }
 
     @Test
     void updateCourse_duplicateName_returns409() {
+        when(courseService.updateCourse(
+                eq(COURSE_ID), any(CourseRequestDTO.class)))
+                .thenThrow(new DuplicateCourseNameException("1st Grade"));
 
+        MvcTestResult result = mvcTester.put().uri(BASE_URL + "/{id}", COURSE_ID)
+                .contentType(MediaType.APPLICATION_JSON).content(BODY_CONTENT).exchange();
+
+        assertThat(result).hasStatus(HttpStatus.CONFLICT);
     }
 
     @Test
     void updateCourse_doesNotExist_returns404() {
+        when(courseService.updateCourse(
+                eq(COURSE_ID), any(CourseRequestDTO.class)))
+                .thenThrow(new EntityNotFoundException("Course ID not found: " + COURSE_ID));
 
+        MvcTestResult result = mvcTester.put().uri(BASE_URL + "/{id}", COURSE_ID)
+                .contentType(MediaType.APPLICATION_JSON).content(BODY_CONTENT).exchange();
+
+        assertThat(result).hasStatus(HttpStatus.NOT_FOUND);
+    }
+
+    // DELETE
+
+    @Test
+    void deleteCourse_exists_returns204() {
+        MvcTestResult result = mvcTester.delete()
+                .uri(BASE_URL + "/{id}", COURSE_ID).exchange();
+
+        assertThat(result).hasStatus(HttpStatus.NO_CONTENT);
+        verify(courseService).deleteCourse(COURSE_ID);
+    }
+
+    @Test
+    void deleteCourse_notEmpty_returns409() {
+        doThrow(new CourseNotEmptyException("1st Grade"))
+                .when(courseService).deleteCourse(COURSE_ID);
+
+        MvcTestResult result = mvcTester.delete()
+                .uri(BASE_URL + "/{id}", COURSE_ID).exchange();
+
+        assertThat(result).hasStatus(HttpStatus.CONFLICT);
+        assertThat(result).bodyJson().extractingPath("$.detail")
+                .isEqualTo("Cannot delete course \"1st Grade\" because it has students enrolled.");
+    }
+
+    @Test
+    void deleteCourse_doesNotExist_returns404() {
+        doThrow(new EntityNotFoundException("1st Grade"))
+                .when(courseService).deleteCourse(COURSE_ID);
+
+        MvcTestResult result = mvcTester.delete()
+                .uri(BASE_URL + "/{id}", COURSE_ID).exchange();
+
+        assertThat(result).hasStatus(HttpStatus.NOT_FOUND);
     }
 
     // helpers
