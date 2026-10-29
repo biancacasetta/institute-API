@@ -1,11 +1,14 @@
 package com.institute.institute_api.service;
 
+import com.institute.institute_api.dto.course.CourseRequestDTO;
 import com.institute.institute_api.dto.course.CourseResponseDTO;
 import com.institute.institute_api.dto.student.StudentRequestDTO;
 import com.institute.institute_api.dto.student.StudentResponseDTO;
 import com.institute.institute_api.embeddable.Address;
+import com.institute.institute_api.embeddable.Timetable;
 import com.institute.institute_api.entity.Course;
 import com.institute.institute_api.entity.Student;
+import com.institute.institute_api.exception.DuplicateCourseNameException;
 import com.institute.institute_api.exception.DuplicateNationalIdException;
 import com.institute.institute_api.repository.CourseRepository;
 import com.institute.institute_api.repository.PaymentRepository;
@@ -164,17 +167,117 @@ public class StudentServiceTest {
     // update
 
     @Test
-    void updateStudent_validRequest_savesAndReturnsUpdatedDto() {}
+    void updateStudent_validRequest_savesAndReturnsUpdatedDto() {
+        Student student = mockStudent();
+        StudentRequestDTO req = mockStudentRequest(null);
+
+        when(studentRepository.findById(STUDENT_ID)).thenReturn(Optional.of(student));
+        when(studentRepository.existsByNationalIdAndIdNot("12345678", STUDENT_ID))
+                .thenReturn(false);
+        when(studentRepository.save(any(Student.class))).thenAnswer(call ->
+                call.getArgument(0));
+
+        StudentResponseDTO result = studentService.updateStudent(STUDENT_ID, req);
+
+        verify(studentRepository).save(student);
+        assertThat(student.getNationalId()).isEqualTo("12345678");
+        assertThat(student.getFirstName()).isEqualTo("John");
+        assertThat(student.getMiddleName()).isNull();
+        assertThat(student.getDob()).isEqualTo(LocalDate.of(2000, 1, 1));
+        assertThat(student.getEmail()).isEqualTo("johndoe@example.com");
+        assertThat(student.getOwnPhone()).isEqualTo("1100002222");
+        assertThat(student.getOtherPhone()).isEqualTo("1100003333");
+        assertThat(student.getAddress()).usingRecursiveComparison().isEqualTo(req.getAddress());
+
+        assertThat(result.getFirstName()).isEqualTo("John");
+    }
+
     @Test
-    void updateStudent_nullCourseId_clearsCourse() {}
+    void updateStudent_nullCourseId_clearsCourse() {
+        Student student = mockStudent();
+        student.setCourse(mockCourse());
+        StudentRequestDTO req = mockStudentRequest(null);
+
+        when(studentRepository.findById(STUDENT_ID)).thenReturn(Optional.of(student));
+        when(studentRepository.existsByNationalIdAndIdNot("12345678", STUDENT_ID))
+                .thenReturn(false);
+        when(studentRepository.save(any(Student.class))).thenAnswer(call ->
+                call.getArgument(0));
+
+        StudentResponseDTO result = studentService.updateStudent(STUDENT_ID, req);
+
+        assertThat(student.getCourse()).isNull();
+        assertThat(result.getCourse()).isNull();
+        verifyNoInteractions(courseRepository);
+    }
+
     @Test
-    void updateStudent_newCourseId_changesCourse() {}
+    void updateStudent_newCourseId_changesCourse() {
+        Course newCourse = Course.builder()
+                .id(UUID.randomUUID())
+                .name("2nd Grade")
+                .fee(BigDecimal.valueOf(50000))
+                .build();
+        Student student = mockStudent();
+        student.setCourse(mockCourse());
+        StudentRequestDTO req = mockStudentRequest(newCourse.getId());
+
+        when(studentRepository.findById(STUDENT_ID)).thenReturn(Optional.of(student));
+        when(studentRepository.existsByNationalIdAndIdNot("12345678", STUDENT_ID))
+                .thenReturn(false);
+        when(courseRepository.findById(newCourse.getId())).thenReturn(Optional.of(newCourse));
+        when(studentRepository.save(any(Student.class))).thenAnswer(call ->
+                call.getArgument(0));
+
+        StudentResponseDTO result = studentService.updateStudent(STUDENT_ID, req);
+
+        assertThat(student.getCourse()).isSameAs(newCourse);
+        assertThat(result.getCourse().name()).isEqualTo("2nd Grade");
+    }
+
     @Test
-    void updateStudent_duplicateNationalId_throwsAndDoesNotUpdate() {}
+    void updateStudent_duplicateNationalId_throwsAndDoesNotUpdate() {
+        StudentRequestDTO req = mockStudentRequest(null);
+
+        when(studentRepository.findById(STUDENT_ID)).thenReturn(Optional.of(mockStudent()));
+        when(studentRepository.existsByNationalIdAndIdNot("12345678", STUDENT_ID))
+                .thenReturn(true);
+
+        assertThatThrownBy(() -> studentService.updateStudent(STUDENT_ID, req))
+                .isInstanceOf(DuplicateNationalIdException.class)
+                .hasMessageContaining("12345678");
+
+        verify(studentRepository, never()).save(any());
+    }
+
     @Test
-    void updateStudent_doesNotExist_throwsNotFound() {}
+    void updateStudent_doesNotExist_throwsNotFound() {
+        StudentRequestDTO req = mockStudentRequest(null);
+
+        when(studentRepository.findById(STUDENT_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> studentService.updateStudent(STUDENT_ID, req))
+                .isInstanceOf(EntityNotFoundException.class)
+                .hasMessageContaining(STUDENT_ID.toString());
+
+        verify(studentRepository, never()).save(any());
+    }
+
     @Test
-    void updateStudent_courseIdDoesNotExist_throwsNotFoundAndDoesNotUpdate() {}
+    void updateStudent_courseIdDoesNotExist_throwsNotFoundAndDoesNotUpdate() {
+        StudentRequestDTO req = mockStudentRequest(COURSE_ID);
+
+        when(studentRepository.findById(STUDENT_ID)).thenReturn(Optional.of(mockStudent()));
+        when(studentRepository.existsByNationalIdAndIdNot("12345678", STUDENT_ID))
+                .thenReturn(false);
+        when(courseRepository.findById(COURSE_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> studentService.updateStudent(STUDENT_ID, req))
+                .isInstanceOf(EntityNotFoundException.class)
+                .hasMessageContaining(COURSE_ID.toString());
+
+        verify(studentRepository, never()).save(any());
+    }
 
     // delete
 
