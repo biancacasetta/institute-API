@@ -1,11 +1,14 @@
 package com.institute.institute_api.service;
 
+import com.institute.institute_api.dto.course.CourseRequestDTO;
 import com.institute.institute_api.dto.student.StudentRequestDTO;
 import com.institute.institute_api.dto.student.StudentResponseDTO;
 import com.institute.institute_api.embeddable.Address;
 import com.institute.institute_api.embeddable.Timetable;
 import com.institute.institute_api.entity.Course;
 import com.institute.institute_api.entity.Student;
+import com.institute.institute_api.exception.DuplicateCourseNameException;
+import com.institute.institute_api.exception.DuplicateNationalIdException;
 import com.institute.institute_api.repository.CourseRepository;
 import com.institute.institute_api.repository.PaymentRepository;
 import com.institute.institute_api.repository.StudentRepository;
@@ -26,9 +29,11 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -77,12 +82,53 @@ public class StudentServiceTest {
         assertThat(result.getCourse()).isNull();
         verifyNoInteractions(courseRepository);
     }
+
     @Test
-    void createStudent_withCourse_linksCourse() {}
+    void createStudent_withCourse_linksCourse() {
+        Course course = mockCourse();
+        StudentRequestDTO req = mockStudentRequest(course.getId());
+
+        when(studentRepository.existsByNationalId("12345678")).thenReturn(false);
+        when(courseRepository.findById(COURSE_ID)).thenReturn(Optional.of(course));
+        when(studentRepository.save(any(Student.class))).thenAnswer(call ->
+            call.getArgument(0));
+
+        StudentResponseDTO result = studentService.createStudent(req);
+
+        ArgumentCaptor<Student> captor = ArgumentCaptor.forClass(Student.class);
+        verify(studentRepository).save(captor.capture());
+        Student student = captor.getValue();
+
+        assertThat(student.getCourse()).isSameAs(course);
+        assertThat(result.getCourse().name()).isEqualTo("1st Grade");
+    }
+
     @Test
-    void createStudent_duplicateNationalId_throwsAndDoesNotSave() {}
+    void createStudent_duplicateNationalId_throwsAndDoesNotSave() {
+        StudentRequestDTO req = mockStudentRequest(null);
+
+        when(studentRepository.existsByNationalId("12345678")).thenReturn(true);
+
+        assertThatThrownBy(() -> studentService.createStudent(req))
+                .isInstanceOf(DuplicateNationalIdException.class)
+                .hasMessageContaining("12345678");
+
+        verify(studentRepository, never()).save(any());
+    }
+
     @Test
-    void createStudent_courseDoesNotExist_throwsNotFoundAndDoesNotSave() {}
+    void createStudent_courseDoesNotExist_throwsNotFoundAndDoesNotSave() {
+        StudentRequestDTO req = mockStudentRequest(COURSE_ID);
+
+        when(studentRepository.existsByNationalId("12345678")).thenReturn(false);
+        when(courseRepository.findById(COURSE_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> studentService.createStudent(req))
+                .isInstanceOf(EntityNotFoundException.class)
+                .hasMessageContaining(COURSE_ID.toString());
+
+        verify(studentRepository, never()).save(any());
+    }
 
     // read
 
@@ -140,6 +186,14 @@ public class StudentServiceTest {
                 .city("Buenos Aires")
                 .zip(4321)
                 .country("Argentina")
+                .build();
+    }
+
+    private static Course mockCourse() {
+        return Course.builder()
+                .id(COURSE_ID)
+                .name("1st Grade")
+                .fee(BigDecimal.valueOf(45000))
                 .build();
     }
 }
