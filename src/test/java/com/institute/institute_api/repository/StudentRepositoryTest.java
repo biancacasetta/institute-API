@@ -30,8 +30,6 @@ public class StudentRepositoryTest {
     @Autowired
     private StudentRepository studentRepository;
     @Autowired
-    private CourseRepository courseRepository;
-    @Autowired
     private TestEntityManager testEntityManager;
 
     // existsByNationalId
