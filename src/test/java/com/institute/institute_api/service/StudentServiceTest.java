@@ -352,7 +352,7 @@ public class StudentServiceTest {
                 .middleName("Anna")
                 .lastName("Doe")
                 .dob(LocalDate.of(1999, 12, 31))
-                .email("janeanna@exmaple.com")
+                .email("janeanna@example.com")
                 .ownPhone("1122223333")
                 .address(mockAddress())
                 .build();
