@@ -1,15 +1,12 @@
 package com.institute.institute_api.service;
 
-import com.institute.institute_api.dto.course.CourseRequestDTO;
-import com.institute.institute_api.dto.course.CourseResponseDTO;
 import com.institute.institute_api.dto.student.StudentRequestDTO;
 import com.institute.institute_api.dto.student.StudentResponseDTO;
 import com.institute.institute_api.embeddable.Address;
-import com.institute.institute_api.embeddable.Timetable;
 import com.institute.institute_api.entity.Course;
 import com.institute.institute_api.entity.Student;
-import com.institute.institute_api.exception.DuplicateCourseNameException;
 import com.institute.institute_api.exception.DuplicateNationalIdException;
+import com.institute.institute_api.exception.StudentHasPaymentsException;
 import com.institute.institute_api.repository.CourseRepository;
 import com.institute.institute_api.repository.PaymentRepository;
 import com.institute.institute_api.repository.StudentRepository;
@@ -151,7 +148,7 @@ public class StudentServiceTest {
         StudentResponseDTO result = studentService.getStudentById(STUDENT_ID);
 
         assertThat(result.getId()).isEqualTo(STUDENT_ID);
-        assertThat(result.getFirstName()).isEqualTo("John");
+        assertThat(result.getFirstName()).isEqualTo("Jane");
         assertThat(result.getCourse()).isNull();
     }
 
@@ -282,11 +279,36 @@ public class StudentServiceTest {
     // delete
 
     @Test
-    void deleteStudent_withoutPayments_deletesStudent() {}
+    void deleteStudent_withoutPayments_deletesStudent() {
+        Student student = mockStudent();
+        when(studentRepository.findById(STUDENT_ID)).thenReturn(Optional.of(student));
+        when(paymentRepository.existsByStudentId(STUDENT_ID)).thenReturn(false);
+
+        studentService.deleteStudent(STUDENT_ID);
+
+        verify(studentRepository).delete(student);
+    }
+
     @Test
-    void deleteStudent_withPayments_throwsAndDoesNotDelete() {}
+    void deleteStudent_withPayments_throwsAndDoesNotDelete() {
+        when(studentRepository.findById(STUDENT_ID)).thenReturn(Optional.of(mockStudent()));
+        when(paymentRepository.existsByStudentId(STUDENT_ID)).thenReturn(true);
+
+        assertThatThrownBy(() -> studentService.deleteStudent(STUDENT_ID))
+                .isInstanceOf(StudentHasPaymentsException.class)
+                .hasMessageContaining("Jane Doe");
+
+        verify(studentRepository, never()).delete(any());
+    }
+
     @Test
-    void deleteStudent_doesNotExist_throwsNotFound() {}
+    void deleteStudent_doesNotExist_throwsNotFound() {
+        when(studentRepository.findById(STUDENT_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> studentService.deleteStudent(STUDENT_ID))
+                .isInstanceOf(EntityNotFoundException.class)
+                .hasMessageContaining(STUDENT_ID.toString());
+    }
 
     // helpers
 
