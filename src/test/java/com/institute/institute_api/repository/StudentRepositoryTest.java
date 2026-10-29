@@ -4,6 +4,7 @@ import com.institute.institute_api.TestcontainersConfig;
 import com.institute.institute_api.embeddable.Address;
 import com.institute.institute_api.entity.Course;
 import com.institute.institute_api.entity.Student;
+import org.hibernate.Hibernate;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
@@ -11,6 +12,9 @@ import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabas
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -130,10 +134,37 @@ public class StudentRepositoryTest {
         assertThat(loaded.getCourse().getId()).isEqualTo(course.getId());
     }
 
+    // pagination
+
+    @Test
+    void findAll_pagedAndSorted_returnsRequestedPages() {
+        testEntityManager.persistAndFlush(mockStudent("11111111", "Doe", null));
+        testEntityManager.persistAndFlush(mockStudent("22222222", "Smith", null));
+        testEntityManager.persistAndFlush(mockStudent("33333333", "Baker", null));
+
+        Page<Student> first = studentRepository.findAll(PageRequest.of(0, 2, Sort.by("lastName")));
+        Page<Student> second = studentRepository.findAll(PageRequest.of(1, 2, Sort.by("lastName")));
+
+        assertThat(first.getTotalElements()).isEqualTo(3);
+        assertThat(first.getTotalPages()).isEqualTo(2);
+        assertThat(first.getContent()).extracting(Student::getLastName)
+                .containsExactly("Baker", "Doe");
+        assertThat(second.getContent()).extracting(Student::getLastName)
+                .containsExactly("Smith");
+    }
+
     // JOIN query to fetch Course together and avoid N+1 problem
 
     @Test
-    void findAll_fetchesCourseInSameQuery() {}
+    void findAll_fetchesCourseInSameQuery() {
+        Course course = testEntityManager.persistAndFlush(mockCourse("1st Grade"));
+        testEntityManager.persistAndFlush(mockStudent("12345678", "Doe", course));
+        testEntityManager.clear();
+
+        Page<Student> page = studentRepository.findAll(PageRequest.of(0, 10));
+
+        assertThat(Hibernate.isInitialized(page.getContent().getFirst().getCourse())).isTrue();
+    }
 
     // helpers
 
