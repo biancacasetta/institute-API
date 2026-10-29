@@ -10,11 +10,13 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -69,15 +71,15 @@ public class StudentRepositoryTest {
 
     @Test
     void existsByCourseId_enrolled_returnsTrue() {
-        Course course = courseRepository.saveAndFlush(mockCourse("1st Grade"));
-        studentRepository.saveAndFlush(mockStudent("12345678", "Doe", course));
+        Course course = testEntityManager.persistAndFlush(mockCourse("1st Grade"));
+        testEntityManager.persistAndFlush(mockStudent("12345678", "Doe", course));
 
         assertThat(studentRepository.existsByCourseId(course.getId())).isTrue();
     }
 
     @Test
     void existsByCourseId_emptyCourse_returnsFalse() {
-        Course course = courseRepository.saveAndFlush(mockCourse("1st Grade"));
+        Course course = testEntityManager.persistAndFlush(mockCourse("1st Grade"));
 
         assertThat(studentRepository.existsByCourseId(course.getId())).isFalse();
     }
@@ -85,14 +87,48 @@ public class StudentRepositoryTest {
     // unique national ID constraint
 
     @Test
-    void save_duplicateNationalId_violatesUniqueConstraint() {}
+    void save_duplicateNationalId_violatesUniqueConstraint() {
+        testEntityManager.persistAndFlush(mockStudent("12345678", "Doe", null));
+
+        assertThatThrownBy(() -> studentRepository.saveAndFlush(
+                mockStudent("12345678", "Smith", null)))
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
 
     // persistence
 
     @Test
-    void save_persistsFieldsAndAddress() {}
+    void save_persistsFieldsAndAddress() {
+        Student saved = testEntityManager.persistAndFlush(
+                mockStudent("12345678", "Doe", null));
+        testEntityManager.clear();
+
+        Student loaded = studentRepository.findById(saved.getId()).orElseThrow();
+
+        assertThat(loaded.getNationalId()).isEqualTo("12345678");
+        assertThat(loaded.getFirstName()).isEqualTo("John");
+        assertThat(loaded.getLastName()).isEqualTo("Doe");
+        assertThat(loaded.getDob()).isEqualTo(LocalDate.of(1999, 12, 31));
+        assertThat(loaded.getEmail()).isEqualTo("john@example.com");
+        assertThat(loaded.getAddress().getStreet()).isEqualTo("Main Street");
+        assertThat(loaded.getAddress().getNumber()).isEqualTo(1234);
+        assertThat(loaded.getAddress().getCity()).isEqualTo("Buenos Aires");
+        assertThat(loaded.getAddress().getZip()).isEqualTo(4321);
+        assertThat(loaded.getAddress().getCountry()).isEqualTo("Argentina");
+        assertThat(loaded.getMiddleName()).isNull();
+        assertThat(loaded.getCourse()).isNull();
+    }
+
     @Test
-    void save_withCourse_persistsRelation() {}
+    void save_withCourse_persistsRelation() {
+        Course course = testEntityManager.persistAndFlush(mockCourse("1st Grade"));
+        Student saved = testEntityManager.persistAndFlush(mockStudent("12345678", "Doe", course));
+        testEntityManager.clear();
+
+        Student loaded = studentRepository.findById(saved.getId()).orElseThrow();
+
+        assertThat(loaded.getCourse().getId()).isEqualTo(course.getId());
+    }
 
     // JOIN query to fetch Course together and avoid N+1 problem
 
@@ -107,7 +143,7 @@ public class StudentRepositoryTest {
                 .firstName("John")
                 .lastName(lastName)
                 .dob(LocalDate.of(1999, 12, 31))
-                .email("janeanna@exmaple.com")
+                .email("john@example.com")
                 .ownPhone("1122223333")
                 .address(mockAddress())
                 .course(course)
