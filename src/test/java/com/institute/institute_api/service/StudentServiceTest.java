@@ -1,33 +1,29 @@
 package com.institute.institute_api.service;
 
-import com.institute.institute_api.dto.course.CourseRequestDTO;
+import com.institute.institute_api.dto.course.CourseResponseDTO;
 import com.institute.institute_api.dto.student.StudentRequestDTO;
 import com.institute.institute_api.dto.student.StudentResponseDTO;
 import com.institute.institute_api.embeddable.Address;
-import com.institute.institute_api.embeddable.Timetable;
 import com.institute.institute_api.entity.Course;
 import com.institute.institute_api.entity.Student;
-import com.institute.institute_api.exception.DuplicateCourseNameException;
 import com.institute.institute_api.exception.DuplicateNationalIdException;
 import com.institute.institute_api.repository.CourseRepository;
 import com.institute.institute_api.repository.PaymentRepository;
 import com.institute.institute_api.repository.StudentRepository;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
-import lombok.Builder;
-import lombok.EqualsAndHashCode;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -133,11 +129,37 @@ public class StudentServiceTest {
     // read
 
     @Test
-    void getAllStudents_returnsMappedPage() {}
+    void getAllStudents_returnsMappedPage() {
+        Pageable pageable = PageRequest.of(0, 10);
+        when(studentRepository.findAll(pageable))
+                .thenReturn(new PageImpl<>(List.of(mockStudent()), pageable, 1));
+
+        Page<StudentResponseDTO> result = studentService.getAllStudents(pageable);
+
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().getFirst().getFirstName()).isEqualTo("Jane");
+    }
+
     @Test
-    void getStudentById_exists_returnsDto() {}
+    void getStudentById_exists_returnsDto() {
+        when(studentRepository.findById(STUDENT_ID)).thenReturn(Optional.of(mockStudent()));
+
+        StudentResponseDTO result = studentService.getStudentById(STUDENT_ID);
+
+        assertThat(result.getId()).isEqualTo(STUDENT_ID);
+        assertThat(result.getFirstName()).isEqualTo("John");
+        assertThat(result.getCourse()).isNull();
+    }
+
     @Test
-    void getStudentById_doesNotExist_throwsNotFound() {}
+    void getStudentById_doesNotExist_throwsNotFound() {
+        when(studentRepository.findById(STUDENT_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> studentService.getStudentById(STUDENT_ID))
+                .isInstanceOf(EntityNotFoundException.class)
+                .hasMessageContaining(STUDENT_ID.toString());
+    }
 
     // update
 
@@ -194,6 +216,20 @@ public class StudentServiceTest {
                 .id(COURSE_ID)
                 .name("1st Grade")
                 .fee(BigDecimal.valueOf(45000))
+                .build();
+    }
+
+    private static Student mockStudent() {
+        return Student.builder()
+                .id(STUDENT_ID)
+                .nationalId("87654321")
+                .firstName("Jane")
+                .middleName("Anna")
+                .lastName("Doe")
+                .dob(LocalDate.of(1999, 12, 31))
+                .email("janeanna@exmaple.com")
+                .ownPhone("1122223333")
+                .address(mockAddress())
                 .build();
     }
 }
