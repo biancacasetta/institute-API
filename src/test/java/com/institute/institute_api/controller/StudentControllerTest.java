@@ -5,8 +5,10 @@ import com.institute.institute_api.dto.course.CourseSummaryDTO;
 import com.institute.institute_api.dto.student.StudentRequestDTO;
 import com.institute.institute_api.dto.student.StudentResponseDTO;
 import com.institute.institute_api.embeddable.Address;
+import com.institute.institute_api.exception.CourseNotEmptyException;
 import com.institute.institute_api.exception.DuplicateCourseNameException;
 import com.institute.institute_api.exception.DuplicateNationalIdException;
+import com.institute.institute_api.exception.StudentHasPaymentsException;
 import com.institute.institute_api.service.StudentService;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.Test;
@@ -426,6 +428,41 @@ public class StudentControllerTest {
 
         MvcTestResult result = mvcTester.put().uri(BASE_URL + "/{id}", STUDENT_ID)
                 .contentType(MediaType.APPLICATION_JSON).content(BODY_CONTENT).exchange();
+
+        assertThat(result).hasStatus(HttpStatus.NOT_FOUND);
+    }
+
+    // DELETE
+
+    @Test
+    void deleteStudent_exists_returns204() {
+        MvcTestResult result = mvcTester.delete()
+                .uri(BASE_URL + "/{id}", STUDENT_ID ).exchange();
+
+        assertThat(result).hasStatus(HttpStatus.NO_CONTENT);
+        verify(studentService).deleteStudent(STUDENT_ID   );
+    }
+
+    @Test
+    void deleteStudent_withPayments_returns409() {
+        doThrow(new StudentHasPaymentsException("John Doe"))
+                .when(studentService).deleteStudent(STUDENT_ID);
+
+        MvcTestResult result = mvcTester.delete()
+                .uri(BASE_URL + "/{id}", STUDENT_ID).exchange();
+
+        assertThat(result).hasStatus(HttpStatus.CONFLICT);
+        assertThat(result).bodyJson().extractingPath("$.detail")
+                .isEqualTo("Cannot delete student \"John Doe\" because they have payments registered.");
+    }
+
+    @Test
+    void deleteStudent_doesNotExist_returns404() {
+        doThrow(new EntityNotFoundException("Student ID not found: " + STUDENT_ID))
+                .when(studentService).deleteStudent(STUDENT_ID);
+
+        MvcTestResult result = mvcTester.delete()
+                .uri(BASE_URL + "/{id}", STUDENT_ID).exchange();
 
         assertThat(result).hasStatus(HttpStatus.NOT_FOUND);
     }
