@@ -1,11 +1,9 @@
 package com.institute.institute_api.controller;
 
-import com.institute.institute_api.dto.course.CourseRequestDTO;
 import com.institute.institute_api.dto.course.CourseSummaryDTO;
 import com.institute.institute_api.dto.student.StudentRequestDTO;
 import com.institute.institute_api.dto.student.StudentResponseDTO;
 import com.institute.institute_api.embeddable.Address;
-import com.institute.institute_api.exception.DuplicateCourseNameException;
 import com.institute.institute_api.exception.DuplicateNationalIdException;
 import com.institute.institute_api.service.StudentService;
 import jakarta.persistence.EntityNotFoundException;
@@ -16,6 +14,9 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -23,6 +24,7 @@ import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -271,6 +273,96 @@ public class StudentControllerTest {
         assertThat(result).hasStatus(HttpStatus.NOT_FOUND);
         assertThat(result).bodyJson().extractingPath("$.detail")
                 .isEqualTo("Course ID not found: " + COURSE_ID);
+    }
+
+    // GET
+
+    @Test
+    void getAllStudents_returns200AndPage() {
+        when(studentService.getAllStudents(any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(mockResponse()),
+                        PageRequest.of(0, 20), 1));
+
+        MvcTestResult result = mvcTester.get().uri(BASE_URL).exchange();
+
+        assertThat(result).hasStatusOk();
+        assertThat(result).bodyJson().extractingPath("$.content").asArray().hasSize(1);
+        assertThat(result).bodyJson().extractingPath("$.content[0].lastName").isEqualTo("Doe");
+        assertThat(result).bodyJson().extractingPath("$.page.totalElements").asNumber().isEqualTo(1);
+    }
+
+    @Test
+    void getAllStudents_noParams_usesPageableDefaults() {
+        when(studentService.getAllStudents(any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.<StudentResponseDTO>of(),
+                        PageRequest.of(0, 20), 0));
+
+        MvcTestResult result = mvcTester.get().uri(BASE_URL).exchange();
+
+        ArgumentCaptor<Pageable> captor = ArgumentCaptor.forClass(Pageable.class);
+        verify(studentService).getAllStudents(captor.capture());
+        Pageable pageable = captor.getValue();
+
+        assertThat(result).hasStatusOk();
+
+        assertThat(pageable.getPageNumber()).isZero();
+        assertThat(pageable.getPageSize()).isEqualTo(20);
+        assertThat(pageable.getSort().getOrderFor("lastName")).isNotNull();
+        assertThat(pageable.getSort().getOrderFor("firstName")).isNotNull();
+    }
+
+    @Test
+    void getAllStudents_customParams_passesPageableToService() {
+        when(studentService.getAllStudents(any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.<StudentResponseDTO>of(),
+                        PageRequest.of(1, 5), 0));
+
+        MvcTestResult result = mvcTester.get()
+                .uri(BASE_URL + "?page=1&size=5&sort=lastName,desc").exchange();
+
+        ArgumentCaptor<Pageable> captor = ArgumentCaptor.forClass(Pageable.class);
+        verify(studentService).getAllStudents(captor.capture());
+        Pageable pageable = captor.getValue();
+
+        assertThat(result).hasStatusOk();
+
+        assertThat(pageable.getPageNumber()).isEqualTo(1);
+        assertThat(pageable.getPageSize()).isEqualTo(5);
+        assertThat(pageable.getSort().getOrderFor("lastName").isDescending()).isTrue();
+    }
+
+    @Test
+    void getStudentById_exists_returns200() {
+        when(studentService.getStudentById(STUDENT_ID)).thenReturn(mockResponse());
+
+        MvcTestResult result = mvcTester.get()
+                .uri(BASE_URL + "/{id}", STUDENT_ID).exchange();
+
+        assertThat(result).hasStatusOk();
+        assertThat(result).bodyJson().extractingPath("$.id").isEqualTo(STUDENT_ID.toString());
+        assertThat(result).bodyJson().extractingPath("$.course.name").isEqualTo("1st Grade");
+    }
+
+    @Test
+    void getStudentById_doesNotExist_returns404() {
+        when(studentService.getStudentById(STUDENT_ID))
+                .thenThrow(new EntityNotFoundException("Student ID not found: " + STUDENT_ID));
+
+        MvcTestResult result = mvcTester.get()
+                .uri(BASE_URL + "/{id}", STUDENT_ID).exchange();
+
+        assertThat(result).hasStatus(HttpStatus.NOT_FOUND);
+        assertThat(result).bodyJson().extractingPath("$.detail")
+                .isEqualTo("Student ID not found: " + STUDENT_ID);
+    }
+
+    @Test
+    void getStudentById_invalidUuid_returns400() {
+        MvcTestResult result = mvcTester.get()
+                .uri(BASE_URL + "/{id}", "invalid-uuid-format").exchange();
+
+        assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+        verifyNoInteractions(studentService);
     }
 
     // helpers
