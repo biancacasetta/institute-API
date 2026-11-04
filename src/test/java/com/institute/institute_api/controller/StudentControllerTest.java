@@ -1,9 +1,11 @@
 package com.institute.institute_api.controller;
 
+import com.institute.institute_api.dto.course.CourseRequestDTO;
 import com.institute.institute_api.dto.course.CourseSummaryDTO;
 import com.institute.institute_api.dto.student.StudentRequestDTO;
 import com.institute.institute_api.dto.student.StudentResponseDTO;
 import com.institute.institute_api.embeddable.Address;
+import com.institute.institute_api.exception.DuplicateCourseNameException;
 import com.institute.institute_api.exception.DuplicateNationalIdException;
 import com.institute.institute_api.service.StudentService;
 import jakarta.persistence.EntityNotFoundException;
@@ -363,6 +365,69 @@ public class StudentControllerTest {
 
         assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
         verifyNoInteractions(studentService);
+    }
+
+    // PUT
+
+    @Test
+    void updateStudent_validRequest_returns200AndUsesPathId() {
+        when(studentService.updateStudent(
+                eq(STUDENT_ID), any(StudentRequestDTO.class))).thenReturn(mockResponse());
+
+        MvcTestResult result = mvcTester.put().uri(BASE_URL + "/{id}", STUDENT_ID)
+                .contentType(MediaType.APPLICATION_JSON).content(BODY_CONTENT).exchange();
+
+        assertThat(result).hasStatusOk();
+        assertThat(result).bodyJson().extractingPath("$.id").isEqualTo(STUDENT_ID.toString());
+        verify(studentService).updateStudent(eq(STUDENT_ID), any(StudentRequestDTO.class));
+    }
+
+    @Test
+    void updateStudent_invalidBody_returns400() {
+        String json = BODY_CONTENT.replace("johnpaul@example.com", "not-an-email");
+
+        MvcTestResult result = mvcTester.put().uri(BASE_URL + "/{id}", STUDENT_ID)
+                .contentType(MediaType.APPLICATION_JSON).content(json).exchange();
+
+        assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+        assertThat(result).bodyJson().extractingPath("$.errors.email").isNotNull();
+        verifyNoInteractions(studentService);
+    }
+
+    @Test
+    void updateStudent_duplicateNationalId_returns409() {
+        when(studentService.updateStudent(
+                eq(STUDENT_ID), any(StudentRequestDTO.class)))
+                .thenThrow(new DuplicateNationalIdException("12345678"));
+
+        MvcTestResult result = mvcTester.put().uri(BASE_URL + "/{id}", STUDENT_ID)
+                .contentType(MediaType.APPLICATION_JSON).content(BODY_CONTENT).exchange();
+
+        assertThat(result).hasStatus(HttpStatus.CONFLICT);
+    }
+
+    @Test
+    void updateStudent_doesNotExist_returns404() {
+        when(studentService.updateStudent(
+                eq(STUDENT_ID), any(StudentRequestDTO.class)))
+                .thenThrow(new EntityNotFoundException("Student ID not found: " + STUDENT_ID));
+
+        MvcTestResult result = mvcTester.put().uri(BASE_URL + "/{id}", STUDENT_ID)
+                .contentType(MediaType.APPLICATION_JSON).content(BODY_CONTENT).exchange();
+
+        assertThat(result).hasStatus(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    void updateStudent_courseIdDoesNotExist_returns404() {
+        when(studentService.updateStudent(
+                eq(STUDENT_ID), any(StudentRequestDTO.class)))
+                .thenThrow(new EntityNotFoundException("Course ID not found: " + COURSE_ID));
+
+        MvcTestResult result = mvcTester.put().uri(BASE_URL + "/{id}", STUDENT_ID)
+                .contentType(MediaType.APPLICATION_JSON).content(BODY_CONTENT).exchange();
+
+        assertThat(result).hasStatus(HttpStatus.NOT_FOUND);
     }
 
     // helpers
