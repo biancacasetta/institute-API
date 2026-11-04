@@ -1,12 +1,9 @@
 package com.institute.institute_api.controller;
 
-import com.institute.institute_api.dto.course.CourseRequestDTO;
 import com.institute.institute_api.dto.course.CourseSummaryDTO;
 import com.institute.institute_api.dto.student.StudentRequestDTO;
 import com.institute.institute_api.dto.student.StudentResponseDTO;
 import com.institute.institute_api.embeddable.Address;
-import com.institute.institute_api.exception.CourseNotEmptyException;
-import com.institute.institute_api.exception.DuplicateCourseNameException;
 import com.institute.institute_api.exception.DuplicateNationalIdException;
 import com.institute.institute_api.exception.StudentHasPaymentsException;
 import com.institute.institute_api.service.StudentService;
