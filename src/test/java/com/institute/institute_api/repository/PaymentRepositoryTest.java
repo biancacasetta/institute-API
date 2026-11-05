@@ -11,12 +11,14 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -113,6 +115,30 @@ public class PaymentRepositoryTest {
         testEntityManager.persistAndFlush(mockPayment(other, "2026-10-05", "10000.00"));
 
         assertThat(paymentRepository.existsByStudentId(student.getId())).isFalse();
+    }
+
+    // persistence
+
+    @Test
+    void save_persistsFieldsAndStudentRelation() {
+        Student student = testEntityManager.persistAndFlush(mockStudent("12345678"));
+        Payment saved = testEntityManager.persistAndFlush(
+                mockPayment(student, "2026-10-31", "45000.00"));
+        testEntityManager.clear();
+
+        Payment loaded = paymentRepository.findById(saved.getId()).orElseThrow();
+
+        assertThat(loaded.getDate()).isEqualTo(LocalDate.parse("2026-10-31"));
+        assertThat(loaded.getAmount()).isEqualByComparingTo("45000.00");
+        assertThat(loaded.getStudent().getId()).isEqualTo(student.getId());
+    }
+
+    @Test
+    void save_withoutStudent_violatesNotNullConstraint() {
+        Payment orphan = mockPayment(null, "2026-10-31", "45000.00");
+
+        assertThatThrownBy(() -> paymentRepository.saveAndFlush(orphan))
+                .isInstanceOf(DataIntegrityViolationException.class);
     }
 
     // helpers
