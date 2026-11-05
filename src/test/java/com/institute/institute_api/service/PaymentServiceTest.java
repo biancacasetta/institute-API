@@ -10,6 +10,7 @@ import com.institute.institute_api.embeddable.Timetable;
 import com.institute.institute_api.entity.Course;
 import com.institute.institute_api.entity.Payment;
 import com.institute.institute_api.entity.Student;
+import com.institute.institute_api.exception.BackToTheFutureException;
 import com.institute.institute_api.repository.PaymentRepository;
 import com.institute.institute_api.repository.StudentRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -24,6 +25,7 @@ import javax.swing.text.html.Option;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -92,6 +94,115 @@ public class PaymentServiceTest {
         verify(paymentRepository, never()).save(any());
     }
 
+    // getAllPaymentsByStudent
+
+    @Test
+    void getAllPaymentsByStudent_withRange_usesGivenDates() {
+        LocalDate from = LocalDate.parse("2026-10-01");
+        LocalDate to = LocalDate.parse("2026-10-31");
+
+        when(props.timezone()).thenReturn(ZONE);
+        when(studentRepository.existsById(STUDENT_ID)).thenReturn(true);
+        when(paymentRepository.findByStudentIdAndDateBetweenOrderByDateDesc(STUDENT_ID, from, to))
+                .thenReturn(List.of(mockPayment()));
+
+        List<PaymentResponseDTO> result = paymentService.getAllPaymentsByStudent(STUDENT_ID, from, to);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.getFirst().getId()).isEqualTo(PAYMENT_ID);
+        assertThat(result.getFirst().getStudentId()).isEqualTo(STUDENT_ID);
+    }
+
+    @Test
+    void getAllPaymentsByStudent_withoutDates_defaultsToCurrentYear() {
+        int year = LocalDate.now(ZONE).getYear();
+
+        when(props.timezone()).thenReturn(ZONE);
+        when(studentRepository.existsById(STUDENT_ID)).thenReturn(true);
+        when(paymentRepository.findByStudentIdAndDateBetweenOrderByDateDesc(
+                eq(STUDENT_ID), any(LocalDate.class), any(LocalDate.class)))
+                .thenReturn(List.of());
+
+        paymentService.getAllPaymentsByStudent(STUDENT_ID, null, null);
+
+        verify(paymentRepository).findByStudentIdAndDateBetweenOrderByDateDesc(
+                STUDENT_ID, LocalDate.of(year, 1, 1), LocalDate.of(year, 12, 31));
+    }
+
+    @Test
+    void getAllPaymentsByStudent_onlyFrom_endDefaultsToEndOfCurrentYear() {
+        int year = LocalDate.now(ZONE).getYear();
+        LocalDate from = LocalDate.of(year, 3, 1);
+
+        when(props.timezone()).thenReturn(ZONE);
+        when(studentRepository.existsById(STUDENT_ID)).thenReturn(true);
+        when(paymentRepository.findByStudentIdAndDateBetweenOrderByDateDesc(
+                eq(STUDENT_ID), any(LocalDate.class), any(LocalDate.class)))
+                .thenReturn(List.of());
+
+        paymentService.getAllPaymentsByStudent(STUDENT_ID, from, null);
+
+        verify(paymentRepository).findByStudentIdAndDateBetweenOrderByDateDesc(
+                STUDENT_ID, from, LocalDate.of(year, 12, 31));
+    }
+
+    @Test
+    void getAllPaymentsByStudent_onlyTo_startDefaultsToStartOfCurrentYear() {
+        int year = LocalDate.now(ZONE).getYear();
+        LocalDate to = LocalDate.of(year, 6, 30);
+
+        when(props.timezone()).thenReturn(ZONE);
+        when(studentRepository.existsById(STUDENT_ID)).thenReturn(true);
+        when(paymentRepository.findByStudentIdAndDateBetweenOrderByDateDesc(
+                eq(STUDENT_ID), any(LocalDate.class), any(LocalDate.class)))
+                .thenReturn(List.of());
+
+        paymentService.getAllPaymentsByStudent(STUDENT_ID, null, to);
+
+        verify(paymentRepository).findByStudentIdAndDateBetweenOrderByDateDesc(
+                STUDENT_ID, LocalDate.of(year, 1, 1), to);
+    }
+
+    @Test
+    void getAllPaymentsByStudent_sameFromAndTo_isAllowed() {
+        LocalDate day = LocalDate.parse("2026-10-05");
+
+        when(props.timezone()).thenReturn(ZONE);
+        when(studentRepository.existsById(STUDENT_ID)).thenReturn(true);
+        when(paymentRepository.findByStudentIdAndDateBetweenOrderByDateDesc(STUDENT_ID, day, day))
+                .thenReturn(List.of());
+
+        assertThat(paymentService.getAllPaymentsByStudent(STUDENT_ID, day, day)).isEmpty();
+    }
+
+    @Test
+    void getAllPaymentsByStudent_studentDoesNotExist_throwsNotFoundAndDoesNotQuery() {
+        when(props.timezone()).thenReturn(ZONE);
+        when(studentRepository.existsById(STUDENT_ID)).thenReturn(false);
+
+        assertThatThrownBy(() -> paymentService.getAllPaymentsByStudent(STUDENT_ID, null, null))
+                .isInstanceOf(EntityNotFoundException.class)
+                .hasMessageContaining(STUDENT_ID.toString());
+
+        verifyNoInteractions(paymentRepository);
+    }
+
+    @Test
+    void getAllPaymentsByStudent_fromAfterTo_throwsAndDoesNotQuery() {
+        LocalDate from = LocalDate.parse("2026-10-31");
+        LocalDate to = LocalDate.parse("2026-10-01");
+
+        when(props.timezone()).thenReturn(ZONE);
+        when(studentRepository.existsById(STUDENT_ID)).thenReturn(true);
+
+        assertThatThrownBy(() -> paymentService.getAllPaymentsByStudent(STUDENT_ID, from, to))
+                .isInstanceOf(BackToTheFutureException.class)
+                .hasMessageContaining("2026-10-31")
+                .hasMessageContaining("2026-10-01");
+
+        verifyNoInteractions(paymentRepository);
+    }
+
     // helpers
 
     private static Student mockStudent() {
@@ -109,6 +220,15 @@ public class PaymentServiceTest {
         req.setDate(LocalDate.parse(date));
         req.setAmount(new BigDecimal(amount));
         return req;
+    }
+
+    private static Payment mockPayment() {
+        return Payment.builder()
+                .id(PAYMENT_ID)
+                .date(LocalDate.parse("2026-10-05"))
+                .amount(new BigDecimal("45000.00"))
+                .student(mockStudent())
+                .build();
     }
 
 }
