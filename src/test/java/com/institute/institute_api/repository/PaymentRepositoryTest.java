@@ -96,6 +96,25 @@ public class PaymentRepositoryTest {
         assertThat(Hibernate.isInitialized(result.getFirst().getStudent())).isTrue();
     }
 
+    // existsByStudentId
+
+    @Test
+    void existsByStudentId_withPayments_returnsTrue() {
+        Student student = testEntityManager.persistAndFlush(mockStudent("12345678"));
+        testEntityManager.persistAndFlush(mockPayment(student, "2026-10-05", "10000.00"));
+
+        assertThat(paymentRepository.existsByStudentId(student.getId())).isTrue();
+    }
+
+    @Test
+    void existsByStudentId_withoutPayments_returnsFalse() {
+        Student student = testEntityManager.persistAndFlush(mockStudent("12345678"));
+        Student other = testEntityManager.persistAndFlush(mockStudent("87654321"));
+        testEntityManager.persistAndFlush(mockPayment(other, "2026-10-05", "10000.00"));
+
+        assertThat(paymentRepository.existsByStudentId(student.getId())).isFalse();
+    }
+
     // helpers
 
     private static Student mockStudent(String nationalId) {
