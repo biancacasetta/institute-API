@@ -282,6 +282,29 @@ public class PaymentServiceTest {
         assertThat(payment.getStudent().getId()).isEqualTo(STUDENT_ID);
     }
 
+    // delete
+
+    @Test
+    void deletePayment_exists_deletesPayment() {
+        Payment payment = mockPayment();
+        when(paymentRepository.findById(PAYMENT_ID)).thenReturn(Optional.of(payment));
+
+        paymentService.deletePayment(PAYMENT_ID);
+
+        verify(paymentRepository).delete(payment);
+    }
+
+    @Test
+    void deletePayment_doesNotExist_throwsNotFoundAndDoesNotDelete() {
+        when(paymentRepository.findById(PAYMENT_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> paymentService.deletePayment(PAYMENT_ID))
+                .isInstanceOf(EntityNotFoundException.class)
+                .hasMessageContaining(PAYMENT_ID.toString());
+
+        verify(paymentRepository, never()).delete(any());
+    }
+
     // helpers
 
     private static Student mockStudent() {
