@@ -203,6 +203,28 @@ public class PaymentServiceTest {
         verifyNoInteractions(paymentRepository);
     }
 
+    // getPaymentById
+
+    @Test
+    void getPaymentById_exists_returnsDto() {
+        when(paymentRepository.findById(PAYMENT_ID)).thenReturn(Optional.of(mockPayment()));
+
+        PaymentResponseDTO result = paymentService.getPaymentById(PAYMENT_ID);
+
+        assertThat(result.getId()).isEqualTo(PAYMENT_ID);
+        assertThat(result.getAmount()).isEqualByComparingTo("45000.00");
+        assertThat(result.getStudentId()).isEqualTo(STUDENT_ID);
+    }
+
+    @Test
+    void getPaymentById_doesNotExist_throwsNotFound() {
+        when(paymentRepository.findById(PAYMENT_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> paymentService.getPaymentById(PAYMENT_ID))
+                .isInstanceOf(EntityNotFoundException.class)
+                .hasMessageContaining(PAYMENT_ID.toString());
+    }
+
     // helpers
 
     private static Student mockStudent() {
