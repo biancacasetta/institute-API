@@ -31,6 +31,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.InstanceOfAssertFactories.LOCAL_DATE;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -223,6 +224,62 @@ public class PaymentServiceTest {
         assertThatThrownBy(() -> paymentService.getPaymentById(PAYMENT_ID))
                 .isInstanceOf(EntityNotFoundException.class)
                 .hasMessageContaining(PAYMENT_ID.toString());
+    }
+
+    // updatePayment
+
+    @Test
+    void updatePayment_validRequest_updatesFieldsAndReturnsDto() {
+        Payment payment = mockPayment();
+        Student newStudent = Student.builder()
+                .id(UUID.randomUUID())
+                .firstName("Jane")
+                .lastName("Smith").build();
+        PaymentRequestDTO req = mockPaymentRequest(newStudent.getId(), "2026-10-06", "40000.00");
+
+        when(paymentRepository.findById(PAYMENT_ID)).thenReturn(Optional.of(payment));
+        when(studentRepository.findById(newStudent.getId())).thenReturn(Optional.of(newStudent));
+
+        PaymentResponseDTO result = paymentService.updatePayment(PAYMENT_ID, req);
+
+        assertThat(payment.getDate()).isEqualTo(LocalDate.parse("2026-10-06"));
+        assertThat(payment.getAmount()).isEqualByComparingTo("40000.00");
+        assertThat(payment.getStudent()).isSameAs(newStudent);
+
+        assertThat(result.getId()).isEqualTo(PAYMENT_ID);
+        assertThat(result.getAmount()).isEqualByComparingTo("40000.00");
+        assertThat(result.getStudentId()).isEqualTo(newStudent.getId());
+    }
+
+    @Test
+    void updatePayment_doesNotExist_throwsNotFound() {
+        PaymentRequestDTO req = mockPaymentRequest(STUDENT_ID, "2026-10-06", "47000.00");
+
+        when(paymentRepository.findById(PAYMENT_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> paymentService.updatePayment(PAYMENT_ID, req))
+                .isInstanceOf(EntityNotFoundException.class)
+                .hasMessageContaining(PAYMENT_ID.toString());
+
+        verifyNoInteractions(studentRepository);
+    }
+
+    @Test
+    void updatePayment_studentDoesNotExist_throwsNotFoundAndLeavesPaymentUnchanged() {
+        Payment payment = mockPayment();
+        UUID missingStudentId = UUID.randomUUID();
+        PaymentRequestDTO req = mockPaymentRequest(missingStudentId, "2026-10-06", "45000.00");
+
+        when(paymentRepository.findById(PAYMENT_ID)).thenReturn(Optional.of(payment));
+        when(studentRepository.findById(missingStudentId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> paymentService.updatePayment(PAYMENT_ID, req))
+                .isInstanceOf(EntityNotFoundException.class)
+                .hasMessageContaining(missingStudentId.toString());
+
+        assertThat(payment.getDate()).isEqualTo(LocalDate.parse("2026-10-05"));
+        assertThat(payment.getAmount()).isEqualByComparingTo("45000.00");
+        assertThat(payment.getStudent().getId()).isEqualTo(STUDENT_ID);
     }
 
     // helpers
