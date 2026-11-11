@@ -2,6 +2,7 @@ package com.institute.institute_api.controller;
 
 import com.institute.institute_api.dto.payment.PaymentRequestDTO;
 import com.institute.institute_api.dto.payment.PaymentResponseDTO;
+import com.institute.institute_api.dto.student.StudentRequestDTO;
 import com.institute.institute_api.exception.BackToTheFutureException;
 import com.institute.institute_api.service.PaymentService;
 import jakarta.persistence.EntityNotFoundException;
@@ -340,6 +341,59 @@ public class PaymentControllerTest {
 
         assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
         verifyNoInteractions(paymentService);
+    }
+
+    // PUT
+
+    @Test
+    void updatePayment_validRequest_returns200AndUsesPathId() {
+        when(paymentService.updatePayment(
+                eq(PAYMENT_ID), any(PaymentRequestDTO.class))).thenReturn(mockResponse());
+
+        MvcTestResult result = mvcTester.put().uri(BASE_URL + "/{id}", PAYMENT_ID)
+                .contentType(MediaType.APPLICATION_JSON).content(BODY_CONTENT).exchange();
+
+        assertThat(result).hasStatusOk();
+        assertThat(result).bodyJson().extractingPath("$.id").isEqualTo(PAYMENT_ID.toString());
+        verify(paymentService).updatePayment(eq(PAYMENT_ID), any(PaymentRequestDTO.class));
+    }
+
+    @Test
+    void updatePayment_invalidBody_returns400() {
+        String json = BODY_CONTENT.replace("45000.00", "-5000.00");
+
+        MvcTestResult result = mvcTester.put().uri(BASE_URL + "/{id}", PAYMENT_ID)
+                .contentType(MediaType.APPLICATION_JSON).content(json).exchange();
+
+        assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+        assertThat(result).bodyJson().extractingPath("$.errors.amount").isNotNull();
+        verifyNoInteractions(paymentService);
+    }
+
+    @Test
+    void updatePayment_doesNotExist_returns404() {
+        when(paymentService.updatePayment(
+                eq(PAYMENT_ID), any(PaymentRequestDTO.class)))
+                .thenThrow(new EntityNotFoundException("Payment ID not found: " + PAYMENT_ID));
+
+        MvcTestResult result = mvcTester.put().uri(BASE_URL + "/{id}", PAYMENT_ID)
+                .contentType(MediaType.APPLICATION_JSON).content(BODY_CONTENT).exchange();
+
+        assertThat(result).hasStatus(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    void updatePayment_studentDoesNotExist_returns404() {
+        when(paymentService.updatePayment(
+                eq(PAYMENT_ID), any(PaymentRequestDTO.class)))
+                .thenThrow(new EntityNotFoundException("Student ID not found: " + STUDENT_ID));
+
+        MvcTestResult result = mvcTester.put().uri(BASE_URL + "/{id}", PAYMENT_ID)
+                .contentType(MediaType.APPLICATION_JSON).content(BODY_CONTENT).exchange();
+
+        assertThat(result).hasStatus(HttpStatus.NOT_FOUND);
+        assertThat(result).bodyJson().extractingPath("$.detail")
+                .isEqualTo("Student ID not found: " + STUDENT_ID);
     }
 
     // helpers
