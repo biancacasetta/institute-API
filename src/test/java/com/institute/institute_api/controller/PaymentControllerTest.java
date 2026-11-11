@@ -396,6 +396,28 @@ public class PaymentControllerTest {
                 .isEqualTo("Student ID not found: " + STUDENT_ID);
     }
 
+    // DELETE
+
+    @Test
+    void deletePayment_exists_returns204() {
+        MvcTestResult result = mvcTester.delete()
+                .uri(BASE_URL + "/{id}", PAYMENT_ID).exchange();
+
+        assertThat(result).hasStatus(HttpStatus.NO_CONTENT);
+        verify(paymentService).deletePayment(PAYMENT_ID);
+    }
+
+    @Test
+    void deletePayment_doesNotExist_returns404() {
+        doThrow(new EntityNotFoundException("Payment ID not found: " + PAYMENT_ID))
+                .when(paymentService).deletePayment(PAYMENT_ID);
+
+        MvcTestResult result = mvcTester.delete()
+                .uri(BASE_URL + "/{id}", PAYMENT_ID).exchange();
+
+        assertThat(result).hasStatus(HttpStatus.NOT_FOUND);
+    }
+
     // helpers
 
     private static PaymentResponseDTO mockResponse() {
