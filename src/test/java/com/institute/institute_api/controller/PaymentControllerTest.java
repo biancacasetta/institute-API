@@ -303,6 +303,45 @@ public class PaymentControllerTest {
                 .isEqualTo("'from' date (2026-10-31) must not be after 'to' date (2026-10-01).");
     }
 
+    @Test
+    void getPaymentById_exists_returns200() {
+        when(paymentService.getPaymentById(PAYMENT_ID)).thenReturn(mockResponse());
+
+        MvcTestResult result = mvcTester.get()
+                .uri(BASE_URL + "/{id}", PAYMENT_ID).exchange();
+
+        assertThat(result).hasStatusOk();
+        assertThat(result).bodyJson().extractingPath("$.id").isEqualTo(PAYMENT_ID.toString());
+        assertThat(result).bodyJson().extractingPath("$.amount").asNumber().isEqualTo(45000.00);
+    }
+
+    @Test
+    void getPaymentById_doesNotExist_returns404() {
+        when(paymentService.getPaymentById(PAYMENT_ID))
+                .thenThrow(new EntityNotFoundException("Payment ID not found: " + PAYMENT_ID));
+
+        MvcTestResult result = mvcTester.get()
+                .uri(BASE_URL + "/{id}", PAYMENT_ID).exchange();
+
+        assertThat(result).hasStatus(HttpStatus.NOT_FOUND);
+        assertThat(result).bodyJson().extractingPath("$.detail")
+                .isEqualTo("Payment ID not found: " + PAYMENT_ID);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"298f8a6b-3e-1c4-4bba-9488-8f4b233e63e7", // wrong segment length
+            "15ee-168da--20c6-4c1f0-9a2b--2806bf323e706", // too many hyphens
+            "123e4567-e89b-12d3-a456", // too short
+            "not-a-real-uuid-string-000000000000", // not hexadecimal
+            "123e4567e89b12d3a456426614174000"}) // no hyphens
+    void getPaymentById_malformedUuid_returns400(String uuid) {
+        MvcTestResult result = mvcTester.get()
+                .uri(BASE_URL + "/{id}", uuid).exchange();
+
+        assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+        verifyNoInteractions(paymentService);
+    }
+
     // helpers
 
     private static PaymentResponseDTO mockResponse() {
