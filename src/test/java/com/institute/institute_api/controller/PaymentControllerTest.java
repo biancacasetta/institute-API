@@ -2,6 +2,7 @@ package com.institute.institute_api.controller;
 
 import com.institute.institute_api.dto.payment.PaymentRequestDTO;
 import com.institute.institute_api.dto.payment.PaymentResponseDTO;
+import com.institute.institute_api.exception.BackToTheFutureException;
 import com.institute.institute_api.service.PaymentService;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.Test;
@@ -19,6 +20,7 @@ import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -172,6 +174,133 @@ public class PaymentControllerTest {
         assertThat(result).hasStatus(HttpStatus.NOT_FOUND);
         assertThat(result).bodyJson().extractingPath("$.detail")
                 .isEqualTo("Student ID not found: " + STUDENT_ID);
+    }
+
+    // GET
+
+    @Test
+    void getAllPaymentsByStudent_returns200AndDtoList() {
+        when(paymentService.getAllPaymentsByStudent(eq(STUDENT_ID), any(), any()))
+                .thenReturn(List.of(mockResponse()));
+
+        MvcTestResult result = mvcTester.get().uri(BASE_URL)
+                .queryParam("studentId", STUDENT_ID.toString()).exchange();
+
+        assertThat(result).hasStatusOk();
+        assertThat(result).bodyJson().extractingPath("$").asArray().hasSize(1);
+        assertThat(result).bodyJson().extractingPath("$[0].id").isEqualTo(PAYMENT_ID.toString());
+        assertThat(result).bodyJson().extractingPath("$.[0].studentId").isEqualTo(STUDENT_ID.toString());
+    }
+
+    @Test
+    void getAllPaymentsByStudent_withoutDates_passesNullToService() {
+        when(paymentService.getAllPaymentsByStudent(eq(STUDENT_ID), any(), any()))
+                .thenReturn(List.of());
+
+        MvcTestResult result = mvcTester.get().uri(BASE_URL)
+                .queryParam("studentId", STUDENT_ID.toString()).exchange();
+
+        assertThat(result).hasStatusOk();
+        verify(paymentService).getAllPaymentsByStudent(STUDENT_ID, null, null);
+    }
+
+    @Test
+    void getAllPaymentsByStudent_withDates_passesParsedDatesToService() {
+        when(paymentService.getAllPaymentsByStudent(eq(STUDENT_ID), any(), any()))
+                .thenReturn(List.of());
+
+        MvcTestResult result = mvcTester.get().uri(BASE_URL)
+                .queryParam("studentId", STUDENT_ID.toString())
+                .queryParam("from", "2026-10-01")
+                .queryParam("to", "2026-10-31")
+                .exchange();
+
+        assertThat(result).hasStatusOk();
+        verify(paymentService).getAllPaymentsByStudent(
+                STUDENT_ID,
+                LocalDate.parse("2026-10-01"),
+                LocalDate.parse("2026-10-31"));
+    }
+
+    @Test
+    void getAllPaymentsByStudent_missingStudentId_returns400() {
+        MvcTestResult result = mvcTester.get().uri(BASE_URL).exchange();
+
+        assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+        verifyNoInteractions(paymentService);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"298f8a6b-3e-1c4-4bba-9488-8f4b233e63e7", // wrong segment length
+            "15ee-168da--20c6-4c1f0-9a2b--2806bf323e706", // too many hyphens
+            "123e4567-e89b-12d3-a456", // too short
+            "not-a-real-uuid-string-000000000000", // not hexadecimal
+            "123e4567e89b12d3a456426614174000"}) // no hyphens
+    void getAllPaymentsByStudent_malformedStudentId_returns400(String studentId) {
+        MvcTestResult result = mvcTester.get().uri(BASE_URL)
+                .queryParam("studentId", studentId)
+                .exchange();
+
+        assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+        verifyNoInteractions(paymentService);
+
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"10-03-2005", "2005-03-35", "2005-15-10", "not-a-date"})
+    void getAllPaymentsByStudent_malformedFormDate_returns400(String fromDate) {
+        MvcTestResult result = mvcTester.get().uri(BASE_URL)
+                .queryParam("studentId", STUDENT_ID.toString())
+                .queryParam("from", fromDate)
+                .exchange();
+
+        assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+        verifyNoInteractions(paymentService);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"10-03-2005", "2005-03-35", "2005-15-10", "not-a-date"})
+    void getAllPaymentsByStudent_malformedToDate_returns400(String toDate) {
+        MvcTestResult result = mvcTester.get().uri(BASE_URL)
+                .queryParam("studentId", STUDENT_ID.toString())
+                .queryParam("from", toDate)
+                .exchange();
+
+        assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+        verifyNoInteractions(paymentService);
+    }
+
+    @Test
+    void getAllPaymentsByStudent_studentDoesNotExist_returns404() {
+        when(paymentService.getAllPaymentsByStudent(eq(STUDENT_ID), any(), any()))
+                .thenThrow(new EntityNotFoundException("Student ID not found: " + STUDENT_ID));
+
+        MvcTestResult result = mvcTester.get().uri(BASE_URL)
+                .queryParam("studentId", STUDENT_ID.toString())
+                .exchange();
+
+        assertThat(result).hasStatus(HttpStatus.NOT_FOUND);
+        assertThat(result).bodyJson().extractingPath("$.detail")
+                        .isEqualTo("Student ID not found: " + STUDENT_ID);
+    }
+
+    @Test
+    void getAllPaymentsByStudent_fromAfterTo_returns400() {
+        LocalDate from = LocalDate.of(2026, 10, 31);
+        LocalDate to = LocalDate.of(2026, 10, 1);
+
+        when(paymentService.getAllPaymentsByStudent(STUDENT_ID, from, to))
+                .thenThrow(new BackToTheFutureException(from, to));
+
+        MvcTestResult result = mvcTester.get().uri(BASE_URL)
+                .queryParam("studentId", STUDENT_ID.toString())
+                .queryParam("from", "2026-10-31")
+                .queryParam("to", "2026-10-01")
+                .exchange();
+
+        assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+        assertThat(result).bodyJson().extractingPath("$.detail")
+                .isEqualTo("'from' date (2026-10-31) must not be after 'to' date (2026-10-01).");
     }
 
     // helpers
