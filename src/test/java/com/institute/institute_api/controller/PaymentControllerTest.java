@@ -2,7 +2,6 @@ package com.institute.institute_api.controller;
 
 import com.institute.institute_api.dto.payment.PaymentRequestDTO;
 import com.institute.institute_api.dto.payment.PaymentResponseDTO;
-import com.institute.institute_api.dto.student.StudentRequestDTO;
 import com.institute.institute_api.exception.BackToTheFutureException;
 import com.institute.institute_api.service.PaymentService;
 import jakarta.persistence.EntityNotFoundException;

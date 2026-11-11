@@ -1,13 +1,8 @@
 package com.institute.institute_api.service;
 
 import com.institute.institute_api.config.InstituteProperties;
-import com.institute.institute_api.dto.course.CourseRequestDTO;
-import com.institute.institute_api.dto.course.CourseResponseDTO;
 import com.institute.institute_api.dto.payment.PaymentRequestDTO;
 import com.institute.institute_api.dto.payment.PaymentResponseDTO;
-import com.institute.institute_api.dto.student.StudentRequestDTO;
-import com.institute.institute_api.embeddable.Timetable;
-import com.institute.institute_api.entity.Course;
 import com.institute.institute_api.entity.Payment;
 import com.institute.institute_api.entity.Student;
 import com.institute.institute_api.exception.BackToTheFutureException;
@@ -21,7 +16,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import javax.swing.text.html.Option;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -31,7 +25,6 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.api.InstanceOfAssertFactories.LOCAL_DATE;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
