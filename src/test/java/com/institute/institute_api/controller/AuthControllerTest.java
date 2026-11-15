@@ -4,6 +4,7 @@ import com.institute.institute_api.dto.auth.AuthRequestDTO;
 import com.institute.institute_api.dto.auth.AuthResponseDTO;
 import com.institute.institute_api.security.AuthProperties;
 import com.institute.institute_api.service.AuthService;
+import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -106,6 +107,47 @@ public class AuthControllerTest {
 
         assertThat(result).hasStatus(HttpStatus.UNAUTHORIZED);
         assertThat(result).bodyJson().extractingPath("$.detail").isEqualTo("Invalid username or password");
+        assertThat(result.getResponse().getHeader(HttpHeaders.SET_COOKIE)).isNull();
+    }
+
+    // POST /refresh
+
+    @Test
+    void refresh_withCookie_passesCookieValueToServiceAndRotatesCookie() {
+        when(authService.refresh("old-refresh")).thenReturn(mockResult("new-refresh"));
+
+        MvcTestResult result = mvcTester.post().uri(BASE_URL + "/refresh")
+                .cookie(new Cookie(REFRESH_COOKIE, "old-refresh")).exchange();
+
+        assertThat(result).hasStatusOk();
+        assertThat(result).bodyJson().extractingPath("$.accessToken").isEqualTo("access-token");
+        assertThat(result.getResponse().getHeader(HttpHeaders.SET_COOKIE))
+                .startsWith("refresh_token=new-refresh;");
+        verify(authService).refresh("old-refresh");
+    }
+
+    @Test
+    void refresh_withoutCookie_passesNullToServiceAndReturns401() {
+        when(authService.refresh(null))
+                .thenThrow(new BadCredentialsException("Invalid or expired refresh token."));
+
+        MvcTestResult result = mvcTester.post().uri(BASE_URL + "/refresh").exchange();
+
+        assertThat(result).hasStatus(HttpStatus.UNAUTHORIZED);
+        assertThat(result).bodyJson().extractingPath("$.detail")
+                .isEqualTo("Invalid or expired refresh token.");
+        verify(authService).refresh(null);
+    }
+
+    @Test
+    void refresh_invalidToken_returns401() {
+        when(authService.refresh("bad-refresh"))
+                .thenThrow(new BadCredentialsException("Invalid or expired refresh token."));
+
+        MvcTestResult result = mvcTester.post().uri(BASE_URL + "/refresh")
+                .cookie(new Cookie(REFRESH_COOKIE, "bad-refresh")).exchange();
+
+        assertThat(result).hasStatus(HttpStatus.UNAUTHORIZED);
         assertThat(result.getResponse().getHeader(HttpHeaders.SET_COOKIE)).isNull();
     }
 
