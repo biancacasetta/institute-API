@@ -151,6 +151,35 @@ public class AuthControllerTest {
         assertThat(result.getResponse().getHeader(HttpHeaders.SET_COOKIE)).isNull();
     }
 
+    // POST logout
+
+    @Test
+    void logout_withCookie_returns204AndClearsCookie() {
+        MvcTestResult result = mvcTester.post().uri(BASE_URL + "/logout")
+                .cookie(new Cookie(REFRESH_COOKIE, "raw-refresh")).exchange();
+
+        assertThat(result).hasStatus(HttpStatus.NO_CONTENT);
+        verify(authService).logout("raw-refresh");
+        assertThat(result.getResponse().getHeader(HttpHeaders.SET_COOKIE)).contains(
+                "refresh_token=;",
+                "Path=/api/auth",
+                "Max-Age=0",
+                "HttpOnly");
+    }
+
+    @Test
+    void logout_withoutCookie_stillReturns204AndClearsCookie() {
+        MvcTestResult result = mvcTester.post().uri(BASE_URL + "/logout").exchange();
+
+        assertThat(result).hasStatus(HttpStatus.NO_CONTENT);
+        verify(authService).logout(null);
+        assertThat(result.getResponse().getHeader(HttpHeaders.SET_COOKIE)).contains(
+                "refresh_token=;",
+                "Path=/api/auth",
+                "Max-Age=0",
+                "HttpOnly");
+    }
+
     // helpers
 
     private static AuthService.AuthResult mockResult(String refreshToken) {
