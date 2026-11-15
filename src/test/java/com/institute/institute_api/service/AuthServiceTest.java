@@ -6,6 +6,7 @@ import com.institute.institute_api.entity.User;
 import com.institute.institute_api.repository.RefreshTokenRepository;
 import com.institute.institute_api.security.AuthProperties;
 import com.institute.institute_api.security.JwtService;
+import jakarta.validation.constraints.Null;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,8 +31,7 @@ import java.util.HexFormat;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.*;
 import static org.assertj.core.api.InstanceOfAssertFactories.DURATION;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -224,6 +224,34 @@ public class AuthServiceTest {
 
         verify(refreshTokenRepository, never()).save(any());
         verifyNoInteractions(jwtService);
+    }
+
+    // logout
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {"   "})
+    void logout_missingOrBlankToken_doesNothing(String rawToken) {
+        authService.logout(rawToken);
+        verifyNoInteractions(refreshTokenRepository);
+    }
+
+    @Test
+    void logout_unknownToken_doesNotThrow() {
+        when(refreshTokenRepository.findByTokenHash(hash(RAW_TOKEN))).thenReturn(Optional.empty());
+        assertThatCode(() -> authService.logout(RAW_TOKEN)).doesNotThrowAnyException();
+    }
+
+    @Test
+    void logout_validToken_revokedOnlyThatToken() {
+        RefreshToken stored = mockStoredToken(
+                mockUser(true), Instant.now().plus(Duration.ofDays(1)), false);
+
+        when(refreshTokenRepository.findByTokenHash(hash(RAW_TOKEN))).thenReturn(Optional.of(stored));
+
+        authService.logout(RAW_TOKEN);
+        assertThat(stored.isRevoked()).isTrue();
+        verify(refreshTokenRepository, never()).revokeAllByUser(any());
     }
 
     // helpers
