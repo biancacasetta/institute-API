@@ -9,6 +9,9 @@ import com.institute.institute_api.security.JwtService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -16,6 +19,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.core.Authentication;
+import org.testcontainers.shaded.com.google.common.base.Verify;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -23,10 +27,12 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HexFormat;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.InstanceOfAssertFactories.DURATION;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -34,6 +40,8 @@ import static org.mockito.Mockito.*;
 public class AuthServiceTest {
     private static final String USERNAME = "admin";
     private static final String PASSWORD = "secret";
+    private static final String RAW_TOKEN = "raw-refresh-token";
+    private static final String INVALID_REFRESH_MESSAGE = "Invalid or expired refresh token.";
 
     @Mock
     private AuthenticationManager authenticationManager;
@@ -119,6 +127,105 @@ public class AuthServiceTest {
         verifyNoInteractions(refreshTokenRepository, jwtService);
     }
 
+    //refresh
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {"   "})
+    void refresh_missingOrBlankToken_throwsWithoutRepositoryInteractions(String rawToken) {
+        assertThatThrownBy(() -> authService.refresh(rawToken))
+                .isInstanceOf(BadCredentialsException.class)
+                .hasMessage(INVALID_REFRESH_MESSAGE);
+
+        verifyNoInteractions(refreshTokenRepository, jwtService);
+    }
+
+    @Test
+    void refresh_unknownToken_throws() {
+        when(refreshTokenRepository.findByTokenHash(hash(RAW_TOKEN)))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> authService.refresh(RAW_TOKEN))
+                .isInstanceOf(BadCredentialsException.class)
+                .hasMessage(INVALID_REFRESH_MESSAGE);
+
+        verify(refreshTokenRepository, never()).revokeAllByUser(any());
+        verify(refreshTokenRepository, never()).save(any());
+    }
+
+    @Test
+    void refresh_validToken_revokesOldAndIssuesNewPair() {
+        User user = mockUser(true);
+        RefreshToken stored = mockStoredToken(user,
+                Instant.now().plus(Duration.ofDays(1)), false);
+
+        when(refreshTokenRepository.findByTokenHash(hash(RAW_TOKEN)))
+                .thenReturn(Optional.of(stored));
+        when(jwtService.createAccessToken(user)).thenReturn("new-access-token");
+
+        AuthService.AuthResult result = authService.refresh(RAW_TOKEN);
+
+        assertThat(stored.isRevoked()).isTrue();
+        assertThat(result.response().accessToken()).isEqualTo("new-access-token");
+        assertThat(result.refreshToken()).isNotEqualTo(RAW_TOKEN);
+
+        ArgumentCaptor<RefreshToken> captor = ArgumentCaptor.forClass(RefreshToken.class);
+        verify(refreshTokenRepository).save(captor.capture());
+        RefreshToken fresh = captor.getValue();
+        assertThat(fresh.getTokenHash()).isEqualTo(hash(result.refreshToken()));
+        assertThat(fresh.isRevoked()).isFalse();
+        assertThat(fresh.getUser()).isSameAs(user);
+
+        verify(refreshTokenRepository, never()).revokeAllByUser(any());
+    }
+
+    @Test
+    void refresh_revokedToken_revokedAllUserTokensAndThrows() {
+        User user = mockUser(true);
+        RefreshToken stored = mockStoredToken(user, Instant.now().plus(Duration.ofDays(1)), true);
+
+        when(refreshTokenRepository.findByTokenHash(hash(RAW_TOKEN))).thenReturn(Optional.of(stored));
+
+        assertThatThrownBy(() -> authService.refresh(RAW_TOKEN))
+                .isInstanceOf(BadCredentialsException.class)
+                .hasMessage(INVALID_REFRESH_MESSAGE);
+
+        verify(refreshTokenRepository).revokeAllByUser(user);
+        verify(refreshTokenRepository, never()).save(any());
+        verifyNoInteractions(jwtService);
+    }
+
+    @Test
+    void refresh_expiredToken_throwsWithoutIssuingTokens() {
+        User user = mockUser(true);
+        RefreshToken stored = mockStoredToken(user, Instant.now().minus(Duration.ofMinutes(1)), false);
+
+        when(refreshTokenRepository.findByTokenHash(hash(RAW_TOKEN))).thenReturn(Optional.of(stored));
+
+        assertThatThrownBy(() -> authService.refresh(RAW_TOKEN))
+                .isInstanceOf(BadCredentialsException.class)
+                .hasMessage(INVALID_REFRESH_MESSAGE);
+
+        verify(refreshTokenRepository, never()).revokeAllByUser(any());
+        verify(refreshTokenRepository, never()).save(any());
+        verifyNoInteractions(jwtService);
+    }
+
+    @Test
+    void refresh_disabledUser_throwsWithoutIssuingTokens() {
+        User user = mockUser(false);
+        RefreshToken stored = mockStoredToken(user, Instant.now().plus(Duration.ofDays(1)), false);
+
+        when(refreshTokenRepository.findByTokenHash(hash(RAW_TOKEN))).thenReturn(Optional.of(stored));
+
+        assertThatThrownBy(() -> authService.refresh(RAW_TOKEN))
+                .isInstanceOf(BadCredentialsException.class)
+                .hasMessage(INVALID_REFRESH_MESSAGE);
+
+        verify(refreshTokenRepository, never()).save(any());
+        verifyNoInteractions(jwtService);
+    }
+
     // helpers
 
     private static User mockUser(boolean active) {
@@ -146,5 +253,18 @@ public class AuthServiceTest {
         } catch (NoSuchAlgorithmException e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    private static RefreshToken mockStoredToken(
+            User user,
+            Instant expiration,
+            boolean revoked) {
+        return RefreshToken.builder()
+                .id(UUID.randomUUID())
+                .tokenHash(hash(RAW_TOKEN))
+                .user(user)
+                .expiration(expiration)
+                .revoked(revoked)
+                .build();
     }
 }
