@@ -9,12 +9,14 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -53,6 +55,62 @@ public class RefreshTokenRepositoryTest {
         assertThat(refreshTokenRepository.findByTokenHash(hash("hash-2"))).isEmpty();
     }
 
+    // unique constraint
+
+    @Test
+    void save_duplicateTokenHash_violatesUniqueConstraint() {
+        User user = persistUser("admin");
+        testEntityManager.persistAndFlush(
+                mockToken(user, "hash-1", NOW.plus(Duration.ofDays(2)), false));
+
+        assertThatThrownBy(() -> refreshTokenRepository.saveAndFlush(
+                mockToken(user, "hash-1", NOW.plus(Duration.ofDays(2)), false)))
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    // revokeAllByUser
+
+    @Test
+    void revokeAllByUser_revokesOnlyThatUsersActiveTokens() {
+        User admin = persistUser("admin");
+        User other = persistUser("other");
+        RefreshToken adminActive1 = persistToken(admin, "admin-1", NOW.plus(Duration.ofDays(1)), false);
+        RefreshToken adminActive2 = persistToken(admin, "admin-2", NOW.plus(Duration.ofDays(2)), false);
+        RefreshToken otherActive = persistToken(other, "other-1", NOW.plus(Duration.ofDays(1)), false);
+
+        refreshTokenRepository.revokeAllByUser(admin);
+        testEntityManager.clear();
+
+        assertThat(reload(adminActive1).isRevoked()).isTrue();
+        assertThat(reload(adminActive2).isRevoked()).isTrue();
+        assertThat(reload(otherActive).isRevoked()).isFalse();
+    }
+
+    @Test
+    void revokeAllByUser_alreadyRevokedToken_staysRevoked() {
+        User admin = persistUser("admin");
+        RefreshToken alreadyRevoked = persistToken(admin, "admin-1", NOW.plus(Duration.ofDays(1)), false);
+        RefreshToken active = persistToken(admin, "admin-2", NOW.plus(Duration.ofDays(1)), false);
+
+        refreshTokenRepository.revokeAllByUser(admin);
+        testEntityManager.clear();
+
+        assertThat(reload(alreadyRevoked).isRevoked()).isTrue();
+        assertThat(reload(active).isRevoked()).isTrue();
+    }
+
+    @Test
+    void revokeAllByUser_userWithoutTokens_doesNothing() {
+        User withTokens = persistUser("admin");
+        User withoutTokens = persistUser("other");
+        RefreshToken token = persistToken(withTokens, "admin-1", NOW.plus(Duration.ofDays(1)), false);
+
+        refreshTokenRepository.revokeAllByUser(withoutTokens);
+        testEntityManager.clear();
+
+        assertThat(reload(token).isRevoked()).isFalse();
+    }
+
     // helpers
 
     private User persistUser(String username) {
@@ -74,5 +132,17 @@ public class RefreshTokenRepositoryTest {
 
     private static String hash(String label) {
         return String.format("%64s", label).replace(' ', '0');
+    }
+
+    private RefreshToken persistToken(User user, String label, Instant expiration, boolean revoked) {
+        return testEntityManager.persistAndFlush(mockToken(
+                user,
+                label,
+                expiration,
+                revoked));
+    }
+
+    private RefreshToken reload(RefreshToken token) {
+        return testEntityManager.find(RefreshToken.class, token.getId());
     }
 }
