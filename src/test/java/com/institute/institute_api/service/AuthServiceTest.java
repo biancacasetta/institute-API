@@ -6,7 +6,6 @@ import com.institute.institute_api.entity.User;
 import com.institute.institute_api.repository.RefreshTokenRepository;
 import com.institute.institute_api.security.AuthProperties;
 import com.institute.institute_api.security.JwtService;
-import jakarta.validation.constraints.Null;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,7 +19,6 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.core.Authentication;
-import org.testcontainers.shaded.com.google.common.base.Verify;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -32,7 +30,6 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.*;
-import static org.assertj.core.api.InstanceOfAssertFactories.DURATION;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -252,6 +249,23 @@ public class AuthServiceTest {
         authService.logout(RAW_TOKEN);
         assertThat(stored.isRevoked()).isTrue();
         verify(refreshTokenRepository, never()).revokeAllByUser(any());
+    }
+
+    // deleteExpiredTokens
+
+    @Test
+    void deleteExpiredTokens_usesCurrentTimeAsCutoff() {
+        when(refreshTokenRepository.deleteExpired(any(Instant.class))).thenReturn(3);
+
+        Instant before = Instant.now();
+        authService.deleteExpiredTokens();
+        Instant after = Instant.now();
+
+        ArgumentCaptor<Instant> captor = ArgumentCaptor.forClass(Instant.class);
+        verify(refreshTokenRepository).deleteExpired(captor.capture());
+        Instant expiration = captor.getValue();
+
+        assertThat(expiration).isBetween(before, after);
     }
 
     // helpers
