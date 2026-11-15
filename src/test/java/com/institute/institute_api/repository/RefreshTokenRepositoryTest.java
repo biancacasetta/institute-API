@@ -11,12 +11,14 @@ import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
 
+import java.sql.Ref;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.InstanceOfAssertFactories.DURATION;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -111,6 +113,34 @@ public class RefreshTokenRepositoryTest {
         assertThat(reload(token).isRevoked()).isFalse();
     }
 
+    // deleteExpired
+
+    @Test
+    void deleteExpired_deletesOnlyTokensExpiredBeforeCutoffAndReturnsCount() {
+        User user = persistUser("admin");
+        RefreshToken expiredActive = persistToken(user, "expired-1", NOW.minus(Duration.ofHours(1)), false);
+        RefreshToken expiredRevoked = persistToken(user, "expired-2", NOW.minus(Duration.ofDays(2)), true);
+        RefreshToken exactlyAtCutoff = persistToken(user, "boundary", NOW, false);
+        RefreshToken validActive = persistToken(user, "valid-1", NOW.plus(Duration.ofHours(1)), false);
+        RefreshToken validRevoked = persistToken(user, "valid-2", NOW.plus(Duration.ofDays(1)), true);
+
+        int deleted = refreshTokenRepository.deleteExpired(NOW);
+        testEntityManager.clear();
+
+        assertThat(deleted).isEqualTo(2);
+        assertThat(exists(expiredActive)).isFalse();
+        assertThat(exists(expiredRevoked)).isFalse();
+        assertThat(exists(exactlyAtCutoff)).isTrue();
+        assertThat(exists(validActive)).isTrue();
+        assertThat(exists(validRevoked)).isTrue();
+    }
+
+    @Test
+    void deleteExpired_nothingExpired_returnsZero() {
+        persistToken(persistUser("admin"), "valid-1", NOW.plus(Duration.ofDays(1)), false);
+        assertThat(refreshTokenRepository.deleteExpired(NOW)).isZero();
+    }
+
     // helpers
 
     private User persistUser(String username) {
@@ -144,5 +174,9 @@ public class RefreshTokenRepositoryTest {
 
     private RefreshToken reload(RefreshToken token) {
         return testEntityManager.find(RefreshToken.class, token.getId());
+    }
+
+    private boolean exists(RefreshToken token) {
+        return reload(token) != null;
     }
 }
