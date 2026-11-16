@@ -1,5 +1,6 @@
 package com.institute.institute_api.service;
 
+import com.institute.institute_api.dto.auth.UserResponseDTO;
 import com.institute.institute_api.entity.User;
 import com.institute.institute_api.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -14,6 +15,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
+import java.lang.reflect.Field;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -96,6 +98,32 @@ public class UserServiceTest {
         assertThatThrownBy(() -> userService.findByUsername(USERNAME))
                 .isInstanceOf(EntityNotFoundException.class)
                 .hasMessageContaining(USERNAME);
+    }
+
+    // getUserById
+
+    @Test
+    void getUserById_exists_returnsDtoWithoutSensitiveFields() {
+        when(userRepository.findById(USER_ID))
+                .thenReturn(Optional.of(mockUser(User.Role.ADMIN, true)));
+
+        UserResponseDTO result = userService.getUserById(USER_ID);
+
+        assertThat(result.id()).isEqualTo(USER_ID);
+        assertThat(result.username()).isEqualTo(USERNAME);
+        assertThat(result.role()).isEqualTo(User.Role.ADMIN);
+        assertThat(result.getClass().getDeclaredFields())
+                .extracting(Field::getName)
+                .doesNotContain("passwordHash", "isActive", "active");
+    }
+
+    @Test
+    void getUserById_doesNotExist_throwsNotFound() {
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> userService.getUserById(USER_ID))
+                .isInstanceOf(EntityNotFoundException.class)
+                .hasMessageContaining(USER_ID.toString());
     }
 
     // helpers
