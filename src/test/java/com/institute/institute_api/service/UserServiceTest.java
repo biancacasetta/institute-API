@@ -2,6 +2,7 @@ package com.institute.institute_api.service;
 
 import com.institute.institute_api.entity.User;
 import com.institute.institute_api.repository.UserRepository;
+import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -69,12 +70,32 @@ public class UserServiceTest {
     }
 
     @Test
-    void loadUserByUsername_doesNotExist_throwsNotFound() {
+    void loadUserByUsername_doesNotExist_throwsUsernameNotFound() {
         when(userRepository.findByUsername(USERNAME)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> userService.loadUserByUsername(USERNAME))
                 .isInstanceOf(UsernameNotFoundException.class)
                 .hasMessage("User not found");
+    }
+
+    // findByUsername
+
+    @Test
+    void findByUsername_exists_returnsUserEntity() {
+        User user = mockUser(User.Role.ADMIN, true);
+
+        when(userRepository.findByUsername(USERNAME)).thenReturn(Optional.of(user));
+
+        assertThat(userService.findByUsername(USERNAME)).isSameAs(user);
+    }
+
+    @Test
+    void findByUsername_doesNotExist_throwsNotFound() {
+        when(userRepository.findByUsername(USERNAME)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> userService.findByUsername(USERNAME))
+                .isInstanceOf(EntityNotFoundException.class)
+                .hasMessageContaining(USERNAME);
     }
 
     // helpers
