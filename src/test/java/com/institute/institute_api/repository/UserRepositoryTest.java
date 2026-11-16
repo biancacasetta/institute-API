@@ -89,6 +89,33 @@ public class UserRepositoryTest {
                 .isInstanceOf(DataIntegrityViolationException.class);
     }
 
+    // persistence
+
+    @Test
+    void save_persistsFieldsAndDefaultsToActive() {
+        User saved = testEntityManager.persistAndFlush(mockUser("admin"));
+        testEntityManager.clear();
+
+        User loaded = userRepository.findById(saved.getId()).orElseThrow();
+
+        assertThat(loaded.getUsername()).isEqualTo("admin");
+        assertThat(loaded.getPasswordHash()).isEqualTo("hashed-password");
+        assertThat(loaded.getRole()).isEqualTo(User.Role.ADMIN);
+        assertThat(loaded.isActive()).isTrue();
+    }
+
+    @Test
+    void save_storesRoleAsStringNotOrdinal() {
+        User saved = testEntityManager.persistAndFlush(mockUser("admin"));
+
+        String column = (String) testEntityManager.getEntityManager()
+                .createNativeQuery("SELECT role FROM users WHERE id = :id")
+                .setParameter("id", saved.getId())
+                .getSingleResult();
+
+        assertThat(column).isEqualTo("ADMIN");
+    }
+
     // helpers
 
     private static User mockUser(String username) {
