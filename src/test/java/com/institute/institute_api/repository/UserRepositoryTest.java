@@ -1,0 +1,55 @@
+package com.institute.institute_api.repository;
+
+import com.institute.institute_api.TestcontainersConfig;
+import com.institute.institute_api.entity.User;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
+import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
+import org.springframework.context.annotation.Import;
+
+import java.util.Optional;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+@DataJpaTest
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@Import(TestcontainersConfig.class)
+public class UserRepositoryTest {
+
+    @Autowired
+    private UserRepository userRepository;
+    @Autowired
+    private TestEntityManager testEntityManager;
+
+    // findByUsername
+
+    @Test
+    void findByUsername_exists_returnsUser() {
+        User saved = testEntityManager.persistAndFlush(mockUser("admin"));
+        testEntityManager.clear();
+
+        Optional<User> found = userRepository.findByUsername("admin");
+
+        assertThat(found).isPresent();
+        assertThat(found.get().getId()).isEqualTo(saved.getId());
+    }
+
+    @Test
+    void findByUsername_doesNotExist_returnsEmpty() {
+        testEntityManager.persistAndFlush(mockUser("admin"));
+
+        assertThat(userRepository.findByUsername("other")).isEmpty();
+    }
+
+    // helpers
+
+    private static User mockUser(String username) {
+        return User.builder()
+                .username(username)
+                .passwordHash("hashed-password")
+                .role(User.Role.ADMIN)
+                .build();
+    }
+}
