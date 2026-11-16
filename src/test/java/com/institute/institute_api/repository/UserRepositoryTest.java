@@ -43,6 +43,22 @@ public class UserRepositoryTest {
         assertThat(userRepository.findByUsername("other")).isEmpty();
     }
 
+    // existsByUsername
+
+    @Test
+    void existsByUsername_exists_returnsTrue() {
+        testEntityManager.persistAndFlush(mockUser("admin"));
+
+        assertThat(userRepository.existsByUsername("admin")).isTrue();
+    }
+
+    @Test
+    void existsByUsername_doesNotExist_returnsFalse() {
+        testEntityManager.persistAndFlush(mockUser("admin"));
+
+        assertThat(userRepository.existsByUsername("other")).isFalse();
+    }
+
     // helpers
 
     private static User mockUser(String username) {
